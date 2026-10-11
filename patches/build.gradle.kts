@@ -7,7 +7,7 @@ patches {
         source = "git@github.com:JacksonJones2003/origin-island-patches.git"
         author = "JacksonJones2003"
         contact = "na"
-        website = "na"
+        website = "https://github.com/JacksonJones2003/origin-island-patches"
         license = "GPLv3"
     }
 }

@@ -1,9 +1,22 @@
 # Origin Island Patches
 
-Morphe patches that integrate apps with the OriginOS music card
-(lock screen and Origin Island) on vivo and iQOO phones.
+Patches for use with Morphe that make YouTube Music work with the OriginOS music card,
+the player on the Origin Island and the lock screen of vivo and iQOO phones.
 
-Hobby project, not affiliated with Morphe, vivo or Google.
+> [!NOTE]
+> This project was made entirely by Claude, the AI model of Anthropic: the reverse engineering,
+> the patches and this README. It was tested by the owner of this repository on one vivo phone
+> running OriginOS 7.
+
+## Disclaimer
+
+This is an unofficial hobby project. It is not affiliated with, endorsed by or supported by
+vivo, iQOO, Google, YouTube or the Morphe project, and all names and trademarks belong to
+their owners.
+
+The patches change how another app behaves, which can be against the terms of service of that
+app. They are provided as they are, without warranty of any kind, and you use them at your own
+risk. See the [license](LICENSE) for details.
 
 ## Patches list
 
@@ -13,36 +26,46 @@ The patches list is generated when a release is created.
 
 <!-- PATCHES_END -->
 
-## Origin Island like button (YouTube Music)
+## Origin Island music card (YouTube Music)
 
-Makes the heart button of the OriginOS music card like the current song.
+Makes the OriginOS music card work with YouTube Music the way it does with the music apps
+vivo supports:
+
+- the heart button likes the current song, and shows if it is liked
+- the loop mode button switches between repeat all, repeat one and shuffle
+- the playlist shows the queue, and plays the song that is tapped
+- synced lyrics are shown, if the **Third-party lyrics** patch of Morphe is applied and enabled
 
 ### Using it
 
-1. Add this patch source to Morphe Manager, next to the official Morphe patches.
-2. Patch YouTube Music in Expert mode, and enable **Origin Island like button** on the tab of
+1. Add this patch source to Morphe Manager, next to the official Morphe patches:
+   https://morphe.software/add-source?github=JacksonJones2003/origin-island-patches
+2. Patch YouTube Music in Expert mode, and enable **Origin Island music card** on the tab of
    this source together with the Morphe patches you normally use.
-3. Restart the phone once after installing. The card only looks for apps that support the
-   heart button when it starts.
+3. Restart the phone once after installing. The card only looks for apps that support these
+   features when it starts.
 
 YouTube Music has to be signed in, since it does not accept likes otherwise.
 
 ### How it works
 
 The card (`com.vivo.musicwidgetmix`) controls most apps through a generic media session
-controller that has no favorite support, which is why the heart is dimmed for them.
-It only offers the heart to apps it controls through a media browser service that declares
-the `com.vivo.musicwidgetmix.support.service` action. For those apps it draws the heart from
-a heart `Rating` in the session metadata, and sends `setRating()` with a heart rating when
-it is tapped.
+controller that only knows the basic playback controls, which is why the other buttons are
+dimmed for them. It offers the rest to apps it controls through a media browser service that
+declares the `com.vivo.musicwidgetmix.support.service` action, and reads what it shows from
+keys of its own in the session metadata and the session extras.
 
-The patch opts YouTube Music into that path:
+The patch opts YouTube Music into that path and translates between the two:
 
 - declares the action on YouTube Music's media browser service, and lets the card connect to it
-- adds to the metadata YouTube Music publishes: the heart rating (from its own thumb rating),
-  the capabilities the card may use, and a media id so the card notices song changes
-- turns the heart rating sent by the card into the thumb rating YouTube Music expects,
-  since YouTube Music would otherwise treat a heart as a dislike
+- adds to the metadata YouTube Music publishes what the card may show and control,
+  and a media id so the card notices song changes
+- heart button: adds a heart rating from YouTube Music's own thumb rating, and turns the heart
+  rating sent by the card into a thumb rating, since YouTube Music would otherwise treat a
+  heart as a dislike
+- loop mode button: maps the loop mode of the card to the repeat and shuffle modes of the session
+- playlist: answers the card's request for the current list with the queue of the session
+- lyrics: sends the lyrics the Third-party lyrics patch loaded to the card in the LRC format
 
 Reverse engineered from `com.vivo.musicwidgetmix` 17.0.8.3 (OriginOS 7)
 and tested with YouTube Music 9.40.51.
