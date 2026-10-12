@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-11T20:16:31",
-  "description": "## 1.0.0 (2026-10-11)\n\n### ✨ New Features\n\n* Add lyrics, loop mode and playlist to the Origin Island music card ([81a4d92](https://github.com/JacksonJones2003/origin-island-patches/commit/81a4d9248c9b56c25f5cee11560e05b474003f2a))\n* Add Origin Island like button patch for YouTube Music ([448705b](https://github.com/JacksonJones2003/origin-island-patches/commit/448705be8c259c1ce8589c108a90927f2123fe98))",
-  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.0.0/patches-1.0.0.mpp",
+  "created_at": "2026-10-12T04:54:09",
+  "description": "## [1.1.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.0.0...v1.1.0) (2026-10-12)\n\n### ✨ New Features\n\n* Add favorites and download lists to the Origin Island music card ([f53e1ea](https://github.com/JacksonJones2003/origin-island-patches/commit/f53e1ea60f02113d38115e943ddae866abee114c))",
+  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.1.0/patches-1.1.0.mpp",
   "signature_download_url": "",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

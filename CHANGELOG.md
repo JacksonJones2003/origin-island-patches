@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.0.0...v1.1.0) (2026-10-12)
+
+### ✨ New Features
+
+* Add favorites and download lists to the Origin Island music card ([f53e1ea](https://github.com/JacksonJones2003/origin-island-patches/commit/f53e1ea60f02113d38115e943ddae866abee114c))
+
 ## 1.0.0 (2026-10-11)
 
 ### ✨ New Features
