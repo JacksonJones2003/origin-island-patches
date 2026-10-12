@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.1.0...v1.2.0) (2026-10-12)
+
+### ✨ New Features
+
+* Support a copy of YouTube Music installed under another package ([d1d589d](https://github.com/JacksonJones2003/origin-island-patches/commit/d1d589de3d5b34f3af0e01b34fdebe5b1553b39c))
+
 ## [1.1.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.0.0...v1.1.0) (2026-10-12)
 
 ### ✨ New Features
