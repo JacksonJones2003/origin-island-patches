@@ -1,6 +1,8 @@
 package app.originisland.extension;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.media.MediaDescription;
 import android.media.MediaMetadata;
 import android.media.Rating;
@@ -12,6 +14,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.service.media.MediaBrowserService;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -42,6 +45,11 @@ public final class OriginIslandMusicCardPatch {
     private static final String TAG = "OriginIslandMusicCard";
 
     private static final String MUSIC_CARD_PACKAGE = "com.vivo.musicwidgetmix";
+
+    /**
+     * Action of the media browser service the card looks for. The patch adds it to the service.
+     */
+    static final String MUSIC_CARD_SERVICE_ACTION = "com.vivo.musicwidgetmix.support.service";
 
     /**
      * Bit mask of what the card may show and control. Without it the card disables everything.
@@ -87,7 +95,26 @@ public final class OriginIslandMusicCardPatch {
      */
     private static final String APP_RESOURCES_PACKAGE = "com.google.android.apps.youtube.music";
 
+    /**
+     * Extra of the intent the card opens some apps with, to have them start to play.
+     * The card does so in place of asking them to play, if they are not running.
+     */
+    private static final String EXTRA_LAUNCH_FROM = "key_launch_from";
+    private static final String LAUNCH_FROM_MUSIC_CARD = "vivomusicmix";
+
+    /**
+     * The app is given a moment to start to play before it is moved out of view,
+     * since it may not start to play from the background.
+     */
+    private static final long HIDE_AFTER_PLAY_DELAY_MS = 700;
+
     private static final String BROWSER_ROOT_ID = "origin_island_music_card";
+
+    /**
+     * Media id of the entry that says a list has nothing in it. The card keeps loading
+     * a list without entries, and then says that the network failed.
+     */
+    static final String EMPTY_LIST_MEDIA_ID = "origin_island_empty_list";
 
     /**
      * Media browser parents of the lists, which the card loads in pages. The card reads
@@ -95,14 +122,14 @@ public final class OriginIslandMusicCardPatch {
      */
     private static final String LIST_CURRENT = "vivomusicmix_current_list";
     private static final String LIST_FAVORITE = "vivomusicmix_favorite_list";
-    private static final String LIST_LOCAL = "vivomusicmix_local_list";
+    static final String LIST_LOCAL = "vivomusicmix_local_list";
     private static final String LIST_KEY_PAGE = "vivomusicmix_key_media_page";
     private static final String LIST_KEY_HAS_MORE = "vivomusicmix_key_has_more";
 
     /**
      * Extra of the list a song is played from, sent with its media id.
      */
-    private static final String KEY_LIST = "vivomusicmix_key_list";
+    static final String KEY_LIST = "vivomusicmix_key_list";
 
     /**
      * The card only listens for lyrics once it has connected, which takes a moment.
@@ -124,6 +151,11 @@ public final class OriginIslandMusicCardPatch {
     private static Boolean lyricsSupported;
     private static Context appContext;
     private static boolean libraryRequested;
+    /**
+     * If the card has connected to the media browser service since the app was started.
+     */
+    private static boolean cardConnected;
+    private static WeakReference<Activity> playOnLaunchActivityRef = new WeakReference<>(null);
 
     /**
      * If the song is liked according to the playback state, or null if it does not tell.
@@ -152,12 +184,109 @@ public final class OriginIslandMusicCardPatch {
      */
     public static MediaBrowserService.BrowserRoot onGetBrowserRoot(String clientPackageName) {
         if (!MUSIC_CARD_PACKAGE.equals(clientPackageName)) {
-            return null;
+            // A copy of the app that is installed under another package asks for the downloads.
+            Context context = getAppContext();
+            boolean isCopy = clientPackageName != null && context != null
+                    && !clientPackageName.equals(context.getPackageName())
+                    && RegularApp.isPatchedApp(context, clientPackageName);
+
+            return isCopy ? new MediaBrowserService.BrowserRoot(BROWSER_ROOT_ID, null) : null;
         }
 
         mainHandler.postDelayed(OriginIslandMusicCardPatch::sendLyrics, SEND_LYRICS_AFTER_CONNECTING_DELAY_MS);
 
+        // The card starts the app to connect to it, and only offers the lists once it is told
+        // of them in the metadata, which the app has none of until it plays.
+        cardConnected = true;
+        publishLastMetadataSoon();
+        mainHandler.postDelayed(publishLastMetadataTask, SEND_LYRICS_AFTER_CONNECTING_DELAY_MS);
+
         return new MediaBrowserService.BrowserRoot(BROWSER_ROOT_ID, null);
+    }
+
+    /**
+     * Injection point. Called as the main activity of the app comes to the front.
+     */
+    public static synchronized void onActivityResume(Activity activity) {
+        try {
+            Intent intent = activity.getIntent();
+            if (intent == null || !LAUNCH_FROM_MUSIC_CARD.equals(intent.getStringExtra(EXTRA_LAUNCH_FROM))) {
+                return;
+            }
+            // The activity keeps its intent as it comes to the front again.
+            intent.removeExtra(EXTRA_LAUNCH_FROM);
+
+            Log.i(TAG, "Opened by the music card to play");
+
+            Runnable playHere = () -> {
+                synchronized (OriginIslandMusicCardPatch.class) {
+                    playOnLaunchActivityRef = new WeakReference<>(activity);
+                    // Otherwise the session is made with the queue the app restores as it starts.
+                    if (sessionRef.get() != null) {
+                        mainHandler.post(OriginIslandMusicCardPatch::playOnLaunch);
+                    }
+                }
+            };
+
+            // A copy of the app that is installed under another package has the app play instead.
+            if (RegularApp.isAvailable(activity)) {
+                activity.moveTaskToBack(true);
+                RegularApp.resume(activity.getApplicationContext(), playHere);
+            } else {
+                playHere.run();
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "onActivityResume failure", ex);
+        }
+    }
+
+    private static synchronized void playOnLaunch() {
+        try {
+            Activity activity = playOnLaunchActivityRef.get();
+            MediaSession session = sessionRef.get();
+            if (activity == null || session == null) {
+                return;
+            }
+            playOnLaunchActivityRef = new WeakReference<>(null);
+
+            // The app resumes what it last played for the play button of a headset.
+            session.getController().dispatchMediaButtonEvent(
+                    new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY));
+            session.getController().dispatchMediaButtonEvent(
+                    new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY));
+
+            mainHandler.postDelayed(() -> {
+                try {
+                    activity.moveTaskToBack(true);
+                } catch (Exception ex) {
+                    Log.e(TAG, "moveTaskToBack failure", ex);
+                }
+            }, HIDE_AFTER_PLAY_DELAY_MS);
+        } catch (Exception ex) {
+            Log.e(TAG, "playOnLaunch failure", ex);
+        }
+    }
+
+    /**
+     * Injection point. Called as the app makes a session, which it can do long before
+     * it gives the session metadata.
+     */
+    public static void onSessionCreated(MediaSession session) {
+        // The app sets the session up after it has made it.
+        mainHandler.post(() -> {
+            try {
+                synchronized (OriginIslandMusicCardPatch.class) {
+                    if (sessionRef.get() == null) {
+                        attachSession(session);
+                        if (cardConnected) {
+                            publishLastMetadataSoon();
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                Log.e(TAG, "onSessionCreated failure", ex);
+            }
+        });
     }
 
     /**
@@ -166,6 +295,10 @@ public final class OriginIslandMusicCardPatch {
     public static synchronized MediaMetadata onSetMetadata(MediaSession session, MediaMetadata metadata) {
         try {
             attachSession(session);
+
+            if (playOnLaunchActivityRef.get() != null) {
+                mainHandler.post(OriginIslandMusicCardPatch::playOnLaunch);
+            }
 
             if (metadata != null) {
                 // The card ignores a song change unless the media id changes as well.
@@ -324,8 +457,26 @@ public final class OriginIslandMusicCardPatch {
             if (libraryList != null) {
                 if (page == 0) {
                     result.detach();
-                    LibraryBrowser.load(browserService, libraryList, children ->
-                            sendLibraryList(result, children));
+                    boolean isDownloads = libraryList == LibraryBrowser.DOWNLOADS;
+                    Runnable loadOwnList = () -> LibraryBrowser.load(browserService, libraryList, children ->
+                            sendLibraryList(result, children, isDownloads));
+
+                    // A copy of the app shows the downloads of the app, if it has any.
+                    if (isDownloads && RegularApp.isAvailable(browserService)) {
+                        RegularApp.loadDownloads(browserService, downloads -> {
+                            try {
+                                if (downloads == null || downloads.isEmpty()) {
+                                    loadOwnList.run();
+                                } else {
+                                    result.sendResult(toSinglePage(downloads));
+                                }
+                            } catch (Exception ex) {
+                                Log.e(TAG, "loadDownloads failure", ex);
+                            }
+                        });
+                    } else {
+                        loadOwnList.run();
+                    }
                 } else {
                     result.sendResult(new ArrayList<>());
                 }
@@ -357,6 +508,13 @@ public final class OriginIslandMusicCardPatch {
             }
 
             Log.i(TAG, "Playlist loaded: " + songs.size() + " songs");
+            if (songs.isEmpty() && page == 0) {
+                songs.add(new MediaDescription.Builder()
+                        .setMediaId(EMPTY_LIST_MEDIA_ID)
+                        .setTitle("Nothing playing")
+                        .setSubtitle("Pick a playlist from the favorites list")
+                        .build());
+            }
             result.sendResult(toSinglePage(songs));
 
             return null;
@@ -376,7 +534,7 @@ public final class OriginIslandMusicCardPatch {
     }
 
     private static void sendLibraryList(MediaBrowserService.Result<List<MediaBrowser.MediaItem>> result,
-                                        List<MediaBrowser.MediaItem> children) {
+                                        List<MediaBrowser.MediaItem> children, boolean isDownloads) {
         try {
             List<MediaDescription> playlists = new ArrayList<>();
             if (children != null) {
@@ -395,6 +553,27 @@ public final class OriginIslandMusicCardPatch {
                             .setSubtitle(description.getSubtitle() == null ? "" : description.getSubtitle())
                             .build());
                 }
+            }
+
+            if (playlists.isEmpty()) {
+                String title;
+                String subtitle;
+                if (children == null) {
+                    title = "Couldn't load";
+                    subtitle = "Open this list again in a moment";
+                } else if (isDownloads) {
+                    title = "No downloads";
+                    subtitle = "Music downloaded in YouTube Music shows here";
+                } else {
+                    title = "No playlists";
+                    subtitle = "Playlists of your library show here";
+                }
+
+                playlists.add(new MediaDescription.Builder()
+                        .setMediaId(EMPTY_LIST_MEDIA_ID)
+                        .setTitle(title)
+                        .setSubtitle(subtitle)
+                        .build());
             }
 
             result.sendResult(toSinglePage(playlists));
@@ -437,6 +616,18 @@ public final class OriginIslandMusicCardPatch {
      */
     public static synchronized String onPlayFromMediaId(String mediaId, Bundle extras) {
         try {
+            if (EMPTY_LIST_MEDIA_ID.equals(mediaId)) {
+                return null;
+            }
+
+            if (RegularApp.isMediaIdOfApp(mediaId)) {
+                Context context = getAppContext();
+                if (context != null) {
+                    RegularApp.play(context, mediaId);
+                }
+                return null;
+            }
+
             String list = extras == null ? null : extras.getString(KEY_LIST);
             if (LIST_FAVORITE.equals(list) || LIST_LOCAL.equals(list)) {
                 Log.i(TAG, "Playing from " + list + ": " + mediaId);
@@ -526,10 +717,7 @@ public final class OriginIslandMusicCardPatch {
         return null;
     }
 
-    /**
-     * @return The string of the app with this name, or null if it has none.
-     */
-    private static String getAppString(String name) {
+    private static Context getAppContext() {
         try {
             if (appContext == null) {
                 // Hidden, but not restricted.
@@ -537,6 +725,19 @@ public final class OriginIslandMusicCardPatch {
                         .getMethod("currentApplication")
                         .invoke(null);
             }
+        } catch (Exception ex) {
+            Log.e(TAG, "getAppContext failure", ex);
+        }
+
+        return appContext;
+    }
+
+    /**
+     * @return The string of the app with this name, or null if it has none.
+     */
+    private static String getAppString(String name) {
+        try {
+            Context appContext = getAppContext();
             if (appContext == null) {
                 return null;
             }
@@ -589,8 +790,16 @@ public final class OriginIslandMusicCardPatch {
     private static synchronized void publishLastMetadata() {
         try {
             MediaSession session = sessionRef.get();
-            if (session != null && lastMetadata != null) {
+            if (session == null) {
+                return;
+            }
+
+            if (lastMetadata != null) {
                 session.setMetadata(withMusicCardKeys(lastMetadata, true));
+            } else if (cardConnected && session.getController().getMetadata() == null) {
+                // Nothing to show yet, but the card is told what it may show and control.
+                session.setMetadata(withMusicCardKeys(new MediaMetadata.Builder().build(), true));
+                Log.i(TAG, "Told the card what it may control before anything plays");
             }
         } catch (Exception ex) {
             Log.e(TAG, "publishLastMetadata failure", ex);

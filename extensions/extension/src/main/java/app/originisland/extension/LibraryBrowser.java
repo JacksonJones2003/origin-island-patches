@@ -70,6 +70,14 @@ public final class LibraryBrowser {
         boolean isSearchedLastFirst(int depth) {
             return false;
         }
+
+        /**
+         * @return If the list is in the tree of a client from the start, and not only once the
+         *         app has loaded the tree. If it is not found then, there is nothing in it.
+         */
+        boolean isOnDevice() {
+            return false;
+        }
     }
 
     private static final class Node {
@@ -124,6 +132,11 @@ public final class LibraryBrowser {
      * Times the tree of a client is searched before the next client is tried, if there is one.
      */
     private static final int MAX_SEARCHES_BEFORE_NEXT_CLIENT = 4;
+    /**
+     * Times the tree of a client is searched for a list that is in it from the start.
+     * The card stops waiting for a list after a few seconds.
+     */
+    private static final int MAX_SEARCHES_ON_DEVICE = 2;
 
     /**
      * The downloaded playlists and mixes, which every client is given under the same ids.
@@ -138,6 +151,12 @@ public final class LibraryBrowser {
         @Override
         boolean isList(int depth, List<MediaBrowser.MediaItem> children) {
             return depth == 2;
+        }
+
+        @Override
+        boolean isOnDevice() {
+            // The app leaves the downloads out of the tree if nothing is downloaded.
+            return true;
         }
     };
 
@@ -377,6 +396,11 @@ public final class LibraryBrowser {
     private void loadNextNode() {
         Node node = nodes.pollFirst();
         if (node == null || nodesLoaded >= MAX_NODES_LOADED) {
+            if (list.isOnDevice() && clientSearches >= MAX_SEARCHES_ON_DEVICE) {
+                finish(new ArrayList<>(), "nothing as " + list.clients[clientIndex]);
+                return;
+            }
+
             boolean isLastClient = clientIndex == list.clients.length - 1;
             if (isLastClient || clientSearches < MAX_SEARCHES_BEFORE_NEXT_CLIENT) {
                 mainHandler.postDelayed(searchAgain, SEARCH_AGAIN_DELAY_MS);

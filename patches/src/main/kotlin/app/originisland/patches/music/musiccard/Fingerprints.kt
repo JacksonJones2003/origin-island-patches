@@ -92,3 +92,22 @@ internal object MediaBrowserServiceOnGetRootFingerprint : Fingerprint(
     returnType = "Landroid/service/media/MediaBrowserService\$BrowserRoot;",
     parameters = listOf("Ljava/lang/String;", "I", "Landroid/os/Bundle;")
 )
+
+/**
+ * `Activity.onResume()` of the main activity, which keeps its name.
+ */
+internal object MusicActivityOnResumeFingerprint : Fingerprint(
+    definingClass = "Lcom/google/android/apps/youtube/music/activities/MusicActivity;",
+    name = "onResume",
+    returnType = "V",
+    parameters = listOf()
+)
+
+internal object MediaSessionConstructorFingerprint : Fingerprint(
+    filters = listOf(
+        methodCall(
+            definingClass = "Landroid/media/session/MediaSession;",
+            name = "<init>"
+        )
+    )
+)

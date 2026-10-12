@@ -44,6 +44,21 @@ private val musicCardServiceResourcePatch = resourcePatch {
                 .firstOrNull { it.getAttribute("android:name") == MUSIC_BROWSER_SERVICE }
                 ?: throw PatchException("Could not find $MUSIC_BROWSER_SERVICE")
 
+            // A copy of the app that is installed under another package asks the app for its
+            // downloads, and has to be allowed to see it for that.
+            val manifest = document.documentElement
+            val queries = manifest.getElementsByTagName("queries").item(0) as? Element
+                ?: (manifest.appendChild(document.createElement("queries")) as Element)
+            queries.appendChild(
+                document.createElement("intent").apply {
+                    appendChild(
+                        document.createElement("action").apply {
+                            setAttribute("android:name", MUSIC_CARD_SERVICE_ACTION)
+                        }
+                    )
+                }
+            )
+
             browserService.appendChild(
                 document.createElement("intent-filter").apply {
                     appendChild(
@@ -161,6 +176,26 @@ val originIslandMusicCardPatch = bytecodePatch(
             }
         }
 
+        // The app makes its session before it has anything to play.
+        MediaSessionConstructorFingerprint.matchAll().forEach { match ->
+            match.method.apply {
+                if (definingClass.startsWith(EXTENSION_PACKAGE) ||
+                    definingClass.startsWith(MORPHE_EXTENSION_PACKAGE)
+                ) return@forEach
+
+                indicesOfCalls(MEDIA_SESSION_CLASS, "<init>").reversed().forEach { index ->
+                    val sessionRegister = (getInstruction(index) as? FiveRegisterInstruction)?.registerC
+                        ?: return@forEach
+
+                    addInstructions(
+                        index + 1,
+                        "invoke-static/range { v$sessionRegister .. v$sessionRegister }, " +
+                                "$EXTENSION_CLASS->onSessionCreated($MEDIA_SESSION_CLASS)V"
+                    )
+                }
+            }
+        }
+
         // The app tells if a song is liked with a custom action of its playback state,
         // which it keeps up to date better than the rating of its metadata.
         MediaSessionSetPlaybackStateFingerprint.matchAll().forEach { match ->
@@ -181,6 +216,12 @@ val originIslandMusicCardPatch = bytecodePatch(
                 }
             }
         }
+
+        // The card opens some apps to have them play, if they are not running.
+        MusicActivityOnResumeFingerprint.method.addInstructions(
+            0,
+            "invoke-static/range { p0 .. p0 }, $EXTENSION_CLASS->onActivityResume(Landroid/app/Activity;)V"
+        )
 
         MediaSessionCallbackOnSetRatingFingerprint.matchAll().forEach { match ->
             match.method.addInstructions(

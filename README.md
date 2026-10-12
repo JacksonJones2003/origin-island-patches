@@ -49,6 +49,7 @@ vivo supports:
 - the playlist shows the queue, and plays the song that is tapped
 - the favorites list shows the playlists of the library, and plays the one that is tapped
 - the download list shows the downloaded playlists and mixes, and plays the one that is tapped
+- a list with nothing in it says so, instead of loading until the card reports a network error
 - synced lyrics are shown, if the **Third-party lyrics** patch of Morphe is applied and enabled
 
 ### Using it
@@ -64,6 +65,22 @@ YouTube Music has to be signed in, since it does not accept likes otherwise.
 
 The favorites list can take a few seconds to load the first time after YouTube Music is
 started, while YouTube Music loads the library.
+
+### A copy under a package the card knows
+
+The card only lists the apps of a list of its own to pick from while nothing plays, and
+YouTube Music is not one of them. A second, patched copy of YouTube Music that is installed
+under the package of one that is, such as `com.luna.music`, can be picked there. For such a
+copy the patch does the following:
+
+- the card opens the copy to have it play, and the copy then resumes what it last played
+  and moves out of view again
+- if YouTube Music is installed under its own package and patched as well, the copy has it
+  play instead, and shows its downloads in the download list. A copy cannot read the
+  downloads of YouTube Music, so YouTube Music plays the ones that are tapped
+
+The card only offers the lists of an app it has no list support built in for while that
+app plays, so the playlist button of a copy stays disabled until something plays.
 
 ### How it works
 
@@ -89,6 +106,9 @@ The patch opts YouTube Music into that path and translates between the two:
   the app, has the app take that connection for Android Auto, and answers the card with the
   playlists and the downloads it finds. The card plays them from their own media ids
 - lyrics: sends the lyrics the Third-party lyrics patch loaded to the card in the LRC format
+- a copy under another package: the card opens some apps with an extra in the intent to have
+  them play, which the main activity of YouTube Music is made to act on. The copy reaches
+  YouTube Music through its media browser service, which is made to answer a patched copy
 
 Reverse engineered from `com.vivo.musicwidgetmix` 17.0.8.3 (OriginOS 7)
 and tested with YouTube Music 9.40.51.
