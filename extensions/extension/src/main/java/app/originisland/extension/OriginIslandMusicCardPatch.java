@@ -1,10 +1,12 @@
 package app.originisland.extension;
 
+import android.content.Context;
 import android.media.MediaDescription;
 import android.media.MediaMetadata;
 import android.media.Rating;
 import android.media.browse.MediaBrowser;
 import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -23,13 +25,15 @@ import java.util.Objects;
  * the app through the transport controls of the session:
  * <ul>
  *     <li>The heart button is drawn from a heart {@link Rating} in the metadata, and sends
- *     a heart rating. YouTube Music rates with thumbs instead.</li>
+ *     a heart rating. YouTube Music rates with thumbs instead, and tells if a song is liked
+ *     with a custom action of the playback state.</li>
  *     <li>The loop mode button is drawn from a mode in the metadata, and sends a custom action.
  *     YouTube Music has a repeat mode and a shuffle mode instead.</li>
  *     <li>Lyrics are read from the session extras. They are taken from the
  *     "Third-party lyrics" patch of Morphe, if it is applied.</li>
- *     <li>The playlist is loaded from the media browser service, and a song of it is played
- *     from its media id. It is the queue of the session here.</li>
+ *     <li>The playlist, the favorites and the downloads are loaded from the media browser
+ *     service, and what is tapped in them is played from its media id. The playlist is the
+ *     queue of the session here, and the other two are playlists of the library of the app.</li>
  * </ul>
  */
 @SuppressWarnings("unused")
@@ -51,6 +55,8 @@ public final class OriginIslandMusicCardPatch {
     private static final long EVENT_FAVORITE = 1 << 6;
     private static final long EVENT_LOOP_MODE = 1 << 7;
     private static final long EVENT_LIST_CURRENT = 1 << 8;
+    private static final long EVENT_LIST_FAVORITE = 1 << 9;
+    private static final long EVENT_LIST_LOCAL = 1 << 10;
 
     private static final String KEY_LOOP_MODE = "vivomusicmix.media.metadata.LOOP_MODE";
     private static final int LOOP_MODE_LIST = 1;
@@ -68,13 +74,28 @@ public final class OriginIslandMusicCardPatch {
     private static final String EXTRA_MEDIA_ID = "vivomusicmix.extra.key.meidia_id";
     private static final String EXTRA_LYRICS = "vivomusicmix.extra.key.lyric";
 
+    /**
+     * Custom actions of the playback state the app likes a song with, or removes the like with.
+     * They are named after which of the two they do, with these strings of the app.
+     */
+    private static final String[] LIKE_ACTIONS = {"thumbs_up_action", "waze.thumbUp"};
+    private static final String LIKE_ACTION_NAME_LIKE = "accessibility_like_video";
+    private static final String LIKE_ACTION_NAME_REMOVE_LIKE = "accessibility_undo_like_video";
+
+    /**
+     * Package of the resources of the app, which patches can install under another package.
+     */
+    private static final String APP_RESOURCES_PACKAGE = "com.google.android.apps.youtube.music";
+
     private static final String BROWSER_ROOT_ID = "origin_island_music_card";
 
     /**
-     * Media browser parent of the playlist, which the card loads in pages. The card reads
+     * Media browser parents of the lists, which the card loads in pages. The card reads
      * from the extras of the last song of a page if there is another page, and its number.
      */
     private static final String LIST_CURRENT = "vivomusicmix_current_list";
+    private static final String LIST_FAVORITE = "vivomusicmix_favorite_list";
+    private static final String LIST_LOCAL = "vivomusicmix_local_list";
     private static final String LIST_KEY_PAGE = "vivomusicmix_key_media_page";
     private static final String LIST_KEY_HAS_MORE = "vivomusicmix_key_has_more";
 
@@ -89,9 +110,10 @@ public final class OriginIslandMusicCardPatch {
     private static final long SEND_LYRICS_AFTER_CONNECTING_DELAY_MS = 1500;
 
     /**
-     * Changing the loop mode changes the repeat and the shuffle mode one after the other.
+     * Changing the loop mode changes the repeat and the shuffle mode one after the other,
+     * and the app changes its playback state several times as it starts a song.
      */
-    private static final long PUBLISH_PLAY_MODES_DELAY_MS = 150;
+    private static final long PUBLISH_LAST_METADATA_DELAY_MS = 150;
 
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final Runnable publishLastMetadataTask = OriginIslandMusicCardPatch::publishLastMetadata;
@@ -100,6 +122,13 @@ public final class OriginIslandMusicCardPatch {
     private static WeakReference<MediaBrowserService> browserServiceRef = new WeakReference<>(null);
     private static PlayModes playModes;
     private static Boolean lyricsSupported;
+    private static Context appContext;
+    private static boolean libraryRequested;
+
+    /**
+     * If the song is liked according to the playback state, or null if it does not tell.
+     */
+    private static Boolean likedByPlaybackState;
 
     /**
      * Metadata as last given to the session, before the keys of the card are added.
@@ -176,13 +205,36 @@ public final class OriginIslandMusicCardPatch {
             }
 
             if (metadata != null) {
-                return withMusicCardKeys(metadata);
+                return withMusicCardKeys(metadata, session == sessionRef.get());
             }
         } catch (Exception ex) {
             Log.e(TAG, "onSetExtensionMetadata failure", ex);
         }
 
         return metadata;
+    }
+
+    /**
+     * Injection point. Called with the playback state of the app.
+     *
+     * The app does not always update the rating of the metadata when it learns that a song
+     * is liked, such as for the first song it plays after it is started. It does update
+     * the custom action that likes the song.
+     */
+    public static synchronized void onSetPlaybackState(MediaSession session, PlaybackState state) {
+        try {
+            if (session != sessionRef.get()) {
+                return;
+            }
+
+            Boolean liked = likedOf(state);
+            if (!Objects.equals(liked, likedByPlaybackState)) {
+                likedByPlaybackState = liked;
+                publishLastMetadataSoon();
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "onSetPlaybackState failure", ex);
+        }
     }
 
     /**
@@ -255,38 +307,57 @@ public final class OriginIslandMusicCardPatch {
                                                      MediaBrowserService.Result<List<MediaBrowser.MediaItem>> result,
                                                      Bundle options) {
         try {
-            if (!LIST_CURRENT.equals(parentId)) {
+            LibraryBrowser.LibraryList libraryList;
+            if (LIST_FAVORITE.equals(parentId)) {
+                libraryList = LibraryBrowser.PLAYLISTS;
+            } else if (LIST_LOCAL.equals(parentId)) {
+                libraryList = LibraryBrowser.DOWNLOADS;
+            } else if (LIST_CURRENT.equals(parentId)) {
+                libraryList = null;
+            } else {
                 return parentId;
+            }
+
+            // Every list is a single page.
+            int page = options == null ? 0 : options.getInt(LIST_KEY_PAGE);
+
+            if (libraryList != null) {
+                if (page == 0) {
+                    result.detach();
+                    LibraryBrowser.load(browserService, libraryList, children ->
+                            sendLibraryList(result, children));
+                } else {
+                    result.sendResult(new ArrayList<>());
+                }
+
+                return null;
             }
 
             browserServiceRef = new WeakReference<>(browserService);
 
-            int page = options == null ? 0 : options.getInt(LIST_KEY_PAGE);
-            List<MediaBrowser.MediaItem> songs = new ArrayList<>();
-            // The whole queue is the first page.
+            // The card loads the playlist as its lists are opened. The app takes a while to load
+            // its library the first time, so it is asked to before the card loads the favorites.
+            if (!libraryRequested) {
+                libraryRequested = true;
+                LibraryBrowser.load(browserService, LibraryBrowser.PLAYLISTS, children -> {
+                });
+            }
+
+            List<MediaDescription> songs = new ArrayList<>();
             List<MediaSession.QueueItem> queue = page == 0 ? getQueue() : null;
             if (queue != null) {
-                for (int i = 0; i < queue.size(); i++) {
-                    MediaDescription description = queue.get(i).getDescription();
-
-                    MediaDescription.Builder song = new MediaDescription.Builder()
+                for (MediaSession.QueueItem song : queue) {
+                    MediaDescription description = song.getDescription();
+                    songs.add(new MediaDescription.Builder()
                             .setMediaId(mediaIdOf(description.getTitle(), description.getSubtitle()))
                             .setTitle(description.getTitle())
-                            .setSubtitle(description.getSubtitle());
-
-                    if (i == queue.size() - 1) {
-                        Bundle extras = new Bundle();
-                        extras.putBoolean(LIST_KEY_HAS_MORE, false);
-                        extras.putInt(LIST_KEY_PAGE, page + 1);
-                        song.setExtras(extras);
-                    }
-
-                    songs.add(new MediaBrowser.MediaItem(song.build(), MediaBrowser.MediaItem.FLAG_PLAYABLE));
+                            .setSubtitle(description.getSubtitle())
+                            .build());
                 }
             }
 
             Log.i(TAG, "Playlist loaded: " + songs.size() + " songs");
-            result.sendResult(songs);
+            result.sendResult(toSinglePage(songs));
 
             return null;
         } catch (Exception ex) {
@@ -304,6 +375,61 @@ public final class OriginIslandMusicCardPatch {
         return onLoadChildren(browserService, parentId, result, null);
     }
 
+    private static void sendLibraryList(MediaBrowserService.Result<List<MediaBrowser.MediaItem>> result,
+                                        List<MediaBrowser.MediaItem> children) {
+        try {
+            List<MediaDescription> playlists = new ArrayList<>();
+            if (children != null) {
+                for (MediaBrowser.MediaItem child : children) {
+                    if (!child.isPlayable()) {
+                        continue;
+                    }
+
+                    // The app plays these from their media ids for every client,
+                    // so the card is given them as they are.
+                    MediaDescription description = child.getDescription();
+                    playlists.add(new MediaDescription.Builder()
+                            .setMediaId(child.getMediaId())
+                            .setTitle(description.getTitle())
+                            // The card shows what is not set as text.
+                            .setSubtitle(description.getSubtitle() == null ? "" : description.getSubtitle())
+                            .build());
+                }
+            }
+
+            result.sendResult(toSinglePage(playlists));
+        } catch (Exception ex) {
+            Log.e(TAG, "sendLibraryList failure", ex);
+        }
+    }
+
+    /**
+     * @return The items of a list as the only page the card has to load of it.
+     */
+    private static List<MediaBrowser.MediaItem> toSinglePage(List<MediaDescription> descriptions) {
+        List<MediaBrowser.MediaItem> items = new ArrayList<>();
+        for (int i = 0; i < descriptions.size(); i++) {
+            MediaDescription description = descriptions.get(i);
+
+            if (i == descriptions.size() - 1) {
+                Bundle extras = new Bundle();
+                extras.putBoolean(LIST_KEY_HAS_MORE, false);
+                extras.putInt(LIST_KEY_PAGE, 1);
+
+                description = new MediaDescription.Builder()
+                        .setMediaId(description.getMediaId())
+                        .setTitle(description.getTitle())
+                        .setSubtitle(description.getSubtitle())
+                        .setExtras(extras)
+                        .build();
+            }
+
+            items.add(new MediaBrowser.MediaItem(description, MediaBrowser.MediaItem.FLAG_PLAYABLE));
+        }
+
+        return items;
+    }
+
     /**
      * Injection point.
      *
@@ -311,7 +437,12 @@ public final class OriginIslandMusicCardPatch {
      */
     public static synchronized String onPlayFromMediaId(String mediaId, Bundle extras) {
         try {
-            if (mediaId == null || extras == null || !LIST_CURRENT.equals(extras.getString(KEY_LIST))) {
+            String list = extras == null ? null : extras.getString(KEY_LIST);
+            if (LIST_FAVORITE.equals(list) || LIST_LOCAL.equals(list)) {
+                Log.i(TAG, "Playing from " + list + ": " + mediaId);
+            }
+
+            if (mediaId == null || !LIST_CURRENT.equals(list)) {
                 return mediaId;
             }
 
@@ -357,13 +488,70 @@ public final class OriginIslandMusicCardPatch {
 
         if (session != null && sessionRef.get() != session) {
             sessionRef = new WeakReference<>(session);
-            playModes = new PlayModes(session, mainHandler, OriginIslandMusicCardPatch::onPlayModesChanged);
+            playModes = new PlayModes(session, mainHandler, OriginIslandMusicCardPatch::publishLastMetadataSoon);
+            // The app can have set the playback state of the session before its metadata.
+            likedByPlaybackState = likedOf(session.getController().getPlaybackState());
         }
     }
 
-    private static void onPlayModesChanged() {
+    private static void publishLastMetadataSoon() {
         mainHandler.removeCallbacks(publishLastMetadataTask);
-        mainHandler.postDelayed(publishLastMetadataTask, PUBLISH_PLAY_MODES_DELAY_MS);
+        mainHandler.postDelayed(publishLastMetadataTask, PUBLISH_LAST_METADATA_DELAY_MS);
+    }
+
+    /**
+     * @return If the song is liked according to the playback state, or null if it does not tell.
+     */
+    private static Boolean likedOf(PlaybackState state) {
+        if (state == null) {
+            return null;
+        }
+
+        for (PlaybackState.CustomAction action : state.getCustomActions()) {
+            for (String likeAction : LIKE_ACTIONS) {
+                if (!likeAction.equals(action.getAction())) {
+                    continue;
+                }
+
+                String name = String.valueOf(action.getName());
+                if (name.equals(getAppString(LIKE_ACTION_NAME_REMOVE_LIKE))) {
+                    return true;
+                }
+                if (name.equals(getAppString(LIKE_ACTION_NAME_LIKE))) {
+                    return false;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return The string of the app with this name, or null if it has none.
+     */
+    private static String getAppString(String name) {
+        try {
+            if (appContext == null) {
+                // Hidden, but not restricted.
+                appContext = (Context) Class.forName("android.app.ActivityThread")
+                        .getMethod("currentApplication")
+                        .invoke(null);
+            }
+            if (appContext == null) {
+                return null;
+            }
+
+            for (String resourcesPackage : new String[]{appContext.getPackageName(), APP_RESOURCES_PACKAGE}) {
+                int id = appContext.getResources().getIdentifier(name, "string", resourcesPackage);
+                if (id != 0) {
+                    return appContext.getString(id);
+                }
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "getAppString failure", ex);
+        }
+
+        return null;
     }
 
     private static synchronized void onLyricsChanged(String lrc) {
@@ -402,19 +590,26 @@ public final class OriginIslandMusicCardPatch {
         try {
             MediaSession session = sessionRef.get();
             if (session != null && lastMetadata != null) {
-                session.setMetadata(withMusicCardKeys(lastMetadata));
+                session.setMetadata(withMusicCardKeys(lastMetadata, true));
             }
         } catch (Exception ex) {
             Log.e(TAG, "publishLastMetadata failure", ex);
         }
     }
 
-    private static MediaMetadata withMusicCardKeys(MediaMetadata metadata) {
+    /**
+     * @param isAppSession If the metadata is for the session of the app,
+     *                     and not for a session of another patch.
+     */
+    private static MediaMetadata withMusicCardKeys(MediaMetadata metadata, boolean isAppSession) {
         Rating userRating = metadata.getRating(MediaMetadata.METADATA_KEY_USER_RATING);
-        boolean liked = userRating != null && userRating.isThumbUp();
+        boolean liked = isAppSession && likedByPlaybackState != null
+                ? likedByPlaybackState
+                : userRating != null && userRating.isThumbUp();
 
         long supportEvent = EVENT_PLAY_CONTROL | EVENT_MUSIC_INFO | EVENT_MUSIC_IMAGE
-                | EVENT_SEEK_POSITION | EVENT_FAVORITE | EVENT_LIST_CURRENT;
+                | EVENT_SEEK_POSITION | EVENT_FAVORITE
+                | EVENT_LIST_CURRENT | EVENT_LIST_FAVORITE | EVENT_LIST_LOCAL;
 
         MediaMetadata.Builder builder = new MediaMetadata.Builder(metadata)
                 .putRating(MediaMetadata.METADATA_KEY_RATING, Rating.newHeartRating(liked))

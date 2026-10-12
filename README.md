@@ -47,6 +47,8 @@ vivo supports:
 - the heart button likes the current song, and shows if it is liked
 - the loop mode button switches between repeat all, repeat one and shuffle
 - the playlist shows the queue, and plays the song that is tapped
+- the favorites list shows the playlists of the library, and plays the one that is tapped
+- the download list shows the downloaded playlists and mixes, and plays the one that is tapped
 - synced lyrics are shown, if the **Third-party lyrics** patch of Morphe is applied and enabled
 
 ### Using it
@@ -59,6 +61,9 @@ vivo supports:
    features when it starts.
 
 YouTube Music has to be signed in, since it does not accept likes otherwise.
+
+The favorites list can take a few seconds to load the first time after YouTube Music is
+started, while YouTube Music loads the library.
 
 ### How it works
 
@@ -73,11 +78,16 @@ The patch opts YouTube Music into that path and translates between the two:
 - declares the action on YouTube Music's media browser service, and lets the card connect to it
 - adds to the metadata YouTube Music publishes what the card may show and control,
   and a media id so the card notices song changes
-- heart button: adds a heart rating from YouTube Music's own thumb rating, and turns the heart
-  rating sent by the card into a thumb rating, since YouTube Music would otherwise treat a
-  heart as a dislike
+- heart button: adds a heart rating from the like action of YouTube Music's playback state,
+  which is kept up to date better than its own thumb rating, and turns the heart rating sent
+  by the card into a thumb rating, since YouTube Music would otherwise treat a heart as a
+  dislike
 - loop mode button: maps the loop mode of the card to the repeat and shuffle modes of the session
 - playlist: answers the card's request for the current list with the queue of the session
+- favorites and download list: YouTube Music only lets clients it knows, such as Android Auto,
+  browse its library. The patch connects to YouTube Music's media browser service from inside
+  the app, has the app take that connection for Android Auto, and answers the card with the
+  playlists and the downloads it finds. The card plays them from their own media ids
 - lyrics: sends the lyrics the Third-party lyrics patch loaded to the card in the LRC format
 
 Reverse engineered from `com.vivo.musicwidgetmix` 17.0.8.3 (OriginOS 7)

@@ -3,6 +3,7 @@ package app.originisland.patches.music.musiccard
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
@@ -16,13 +17,20 @@ import org.w3c.dom.Element
 
 private const val EXTENSION_PACKAGE = "Lapp/originisland/extension/"
 private const val EXTENSION_CLASS = "${EXTENSION_PACKAGE}OriginIslandMusicCardPatch;"
+private const val LIBRARY_BROWSER_CLASS = "${EXTENSION_PACKAGE}LibraryBrowser;"
+
+private const val MORPHE_EXTENSION_PACKAGE = "Lapp/morphe/extension/"
+
+private const val MEDIA_SESSION_CLASS = "Landroid/media/session/MediaSession;"
+private const val MEDIA_BROWSER_SERVICE_CLASS = "Landroid/service/media/MediaBrowserService;"
+private const val REMOTE_USER_INFO_CLASS = "Landroid/media/session/MediaSessionManager\$RemoteUserInfo;"
 
 private const val MUSIC_BROWSER_SERVICE =
     "com.google.android.apps.youtube.music.mediabrowser.MusicBrowserService"
 
 /**
- * The music card only offers the heart button, the loop mode button and lyrics to apps it
- * controls through a media browser service that declares this action.
+ * The music card only offers the heart button, the loop mode button, lyrics and lists to apps
+ * it controls through a media browser service that declares this action.
  * Every other app gets a controller without them.
  */
 private const val MUSIC_CARD_SERVICE_ACTION = "com.vivo.musicwidgetmix.support.service"
@@ -53,8 +61,8 @@ private val musicCardServiceResourcePatch = resourcePatch {
 val originIslandMusicCardPatch = bytecodePatch(
     name = "Origin Island music card",
     description = "Lets the OriginOS music card on the lock screen and Origin Island like songs, " +
-            "switch between repeat and shuffle, show the playlist, and show the lyrics of the " +
-            "Third-party lyrics patch.",
+            "switch between repeat and shuffle, show the playlist, the playlists of the library " +
+            "and the downloads, and show the lyrics of the Third-party lyrics patch.",
     default = true
 ) {
     compatibleWith(COMPATIBILITY_YOUTUBE_MUSIC)
@@ -64,6 +72,12 @@ val originIslandMusicCardPatch = bytecodePatch(
     extendWith("extensions/extension.mpe")
 
     execute {
+        fun MutableMethod.indicesOfCalls(definingClass: String, name: String) =
+            implementation!!.instructions.withIndex().filter { (_, instruction) ->
+                val reference = (instruction as? ReferenceInstruction)?.reference as? MethodReference
+                reference?.definingClass == definingClass && reference.name == name
+            }.map { it.index }
+
         // The app only lets allowlisted clients connect to its media browser service.
         // The card is answered before the app is asked, with a root of the platform,
         // so that it loads the playlist through the platform as well.
@@ -74,7 +88,19 @@ val originIslandMusicCardPatch = bytecodePatch(
                     throw PatchException("Not enough registers in onGetRoot")
                 }
 
+                // The extension loads lists of the library as a client of the app. The app decides
+                // what a client may browse from its package and uid, which it is given here.
                 // The parameter registers of this method can be out of reach of a regular invoke.
+                addInstructions(
+                    0,
+                    """
+                        invoke-static/range { p1 .. p3 }, $LIBRARY_BROWSER_CLASS->getClientPackage(Ljava/lang/String;ILandroid/os/Bundle;)Ljava/lang/String;
+                        move-result-object p1
+                        invoke-static/range { p2 .. p3 }, $LIBRARY_BROWSER_CLASS->getClientUid(ILandroid/os/Bundle;)I
+                        move-result p2
+                    """
+                )
+
                 addInstructionsWithLabels(
                     0,
                     """
@@ -88,6 +114,25 @@ val originIslandMusicCardPatch = bytecodePatch(
             }
         }
 
+        // The app asks for the client again with every request to its media browser service.
+        MediaBrowserServiceGetCurrentBrowserInfoFingerprint.matchAll().forEach { match ->
+            match.method.apply {
+                // The extension calls it for the app.
+                if (definingClass.startsWith(EXTENSION_PACKAGE)) return@forEach
+
+                indicesOfCalls(MEDIA_BROWSER_SERVICE_CLASS, "getCurrentBrowserInfo").forEach { index ->
+                    val serviceRegister = (getInstruction(index) as? FiveRegisterInstruction)?.registerC
+                        ?: throw PatchException("Unexpected call of getCurrentBrowserInfo in $definingClass")
+
+                    replaceInstruction(
+                        index,
+                        "invoke-static { v$serviceRegister }, $LIBRARY_BROWSER_CLASS->" +
+                                "getCurrentBrowserInfo($MEDIA_BROWSER_SERVICE_CLASS)$REMOTE_USER_INFO_CLASS"
+                    )
+                }
+            }
+        }
+
         // Other patches publish metadata to the session from their extensions,
         // so every call is hooked and not only the one of the app.
         MediaSessionSetMetadataFingerprint.matchAll().forEach { match ->
@@ -95,16 +140,10 @@ val originIslandMusicCardPatch = bytecodePatch(
                 // The extension of this patch publishes to the session as well.
                 if (definingClass.startsWith(EXTENSION_PACKAGE)) return@forEach
 
-                val isAppMetadata = !definingClass.startsWith("Lapp/morphe/extension/")
-
-                val setMetadataIndices = implementation!!.instructions.withIndex().filter { (_, instruction) ->
-                    val reference = (instruction as? ReferenceInstruction)?.reference as? MethodReference
-                    reference?.definingClass == "Landroid/media/session/MediaSession;" &&
-                            reference.name == "setMetadata"
-                }.map { it.index }
+                val isAppMetadata = !definingClass.startsWith(MORPHE_EXTENSION_PACKAGE)
 
                 // Reversed, so the indices of the remaining calls stay valid.
-                setMetadataIndices.reversed().forEach { index ->
+                indicesOfCalls(MEDIA_SESSION_CLASS, "setMetadata").reversed().forEach { index ->
                     val instruction = getInstruction<FiveRegisterInstruction>(index)
                     val sessionRegister = instruction.registerC
                     val metadataRegister = instruction.registerD
@@ -117,6 +156,27 @@ val originIslandMusicCardPatch = bytecodePatch(
                             invoke-static { v$sessionRegister, v$metadataRegister }, $EXTENSION_CLASS->$extensionMethod(Landroid/media/session/MediaSession;Landroid/media/MediaMetadata;)Landroid/media/MediaMetadata;
                             move-result-object v$metadataRegister
                         """
+                    )
+                }
+            }
+        }
+
+        // The app tells if a song is liked with a custom action of its playback state,
+        // which it keeps up to date better than the rating of its metadata.
+        MediaSessionSetPlaybackStateFingerprint.matchAll().forEach { match ->
+            match.method.apply {
+                if (definingClass.startsWith(EXTENSION_PACKAGE) ||
+                    definingClass.startsWith(MORPHE_EXTENSION_PACKAGE)
+                ) return@forEach
+
+                indicesOfCalls(MEDIA_SESSION_CLASS, "setPlaybackState").reversed().forEach { index ->
+                    val instruction = getInstruction<FiveRegisterInstruction>(index)
+
+                    addInstructions(
+                        index,
+                        "invoke-static { v${instruction.registerC}, v${instruction.registerD} }, " +
+                                "$EXTENSION_CLASS->onSetPlaybackState(" +
+                                "${MEDIA_SESSION_CLASS}Landroid/media/session/PlaybackState;)V"
                     )
                 }
             }
@@ -160,7 +220,7 @@ val originIslandMusicCardPatch = bytecodePatch(
             )
         }
 
-        val onLoadChildrenParameters = "Landroid/service/media/MediaBrowserService;" +
+        val onLoadChildrenParameters = MEDIA_BROWSER_SERVICE_CLASS +
                 "Ljava/lang/String;" +
                 "Landroid/service/media/MediaBrowserService\$Result;"
 

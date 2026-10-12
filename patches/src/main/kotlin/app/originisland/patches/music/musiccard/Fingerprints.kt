@@ -20,6 +20,16 @@ internal object MediaSessionSetMetadataFingerprint : Fingerprint(
     )
 )
 
+internal object MediaSessionSetPlaybackStateFingerprint : Fingerprint(
+    filters = listOf(
+        methodCall(
+            definingClass = "Landroid/media/session/MediaSession;",
+            name = "setPlaybackState",
+            parameters = listOf("Landroid/media/session/PlaybackState;")
+        )
+    )
+)
+
 internal object MediaSessionCallbackOnSetRatingFingerprint : Fingerprint(
     name = "onSetRating",
     returnType = "V",
@@ -63,6 +73,15 @@ internal object MediaBrowserServiceOnLoadChildrenWithOptionsFingerprint : Finger
     name = "onLoadChildren",
     returnType = "V",
     parameters = listOf("Ljava/lang/String;", MEDIA_BROWSER_SERVICE_RESULT_CLASS, "Landroid/os/Bundle;")
+)
+
+internal object MediaBrowserServiceGetCurrentBrowserInfoFingerprint : Fingerprint(
+    filters = listOf(
+        methodCall(
+            definingClass = "Landroid/service/media/MediaBrowserService;",
+            name = "getCurrentBrowserInfo"
+        )
+    )
 )
 
 /**
