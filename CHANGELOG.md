@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.3.0...v1.4.0) (2026-10-13)
+
+### ✨ New Features
+
+* Add Lyrics in player patch for YouTube Music ([36ea7c0](https://github.com/JacksonJones2003/origin-island-patches/commit/36ea7c025c6ab1de34927c12872b150b731d9ace))
+
 ## [1.3.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.2.0...v1.3.0) (2026-10-13)
 
 ### ✨ New Features
