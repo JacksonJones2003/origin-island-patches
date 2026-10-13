@@ -73,7 +73,7 @@ final class RegularApp {
      */
     static boolean isPatchedApp(Context context, String packageName) {
         try {
-            Intent intent = new Intent(OriginIslandMusicCardPatch.MUSIC_CARD_SERVICE_ACTION).setPackage(packageName);
+            Intent intent = new Intent(MusicCardProtocol.MUSIC_CARD_SERVICE_ACTION).setPackage(packageName);
             for (ResolveInfo service : context.getPackageManager().queryIntentServices(intent, 0)) {
                 if (BROWSER_SERVICE.equals(service.serviceInfo.name)) {
                     return true;
@@ -122,12 +122,12 @@ final class RegularApp {
                 return;
             }
 
-            browser.subscribe(OriginIslandMusicCardPatch.LIST_LOCAL, new MediaBrowser.SubscriptionCallback() {
+            browser.subscribe(MusicCardProtocol.LIST_LOCAL, new MediaBrowser.SubscriptionCallback() {
                 @Override
                 public void onChildrenLoaded(String parentId, List<MediaBrowser.MediaItem> children) {
                     try {
                         for (MediaBrowser.MediaItem child : children) {
-                            if (OriginIslandMusicCardPatch.EMPTY_LIST_MEDIA_ID.equals(child.getMediaId())) {
+                            if (MusicCardProtocol.EMPTY_LIST_MEDIA_ID.equals(child.getMediaId())) {
                                 continue;
                             }
 
@@ -161,7 +161,7 @@ final class RegularApp {
 
         connect(context, browser -> {
             Bundle extras = new Bundle();
-            extras.putString(OriginIslandMusicCardPatch.KEY_LIST, OriginIslandMusicCardPatch.LIST_LOCAL);
+            extras.putString(MusicCardProtocol.KEY_LIST, MusicCardProtocol.LIST_LOCAL);
             new MediaController(context, browser.getSessionToken())
                     .getTransportControls()
                     .playFromMediaId(appMediaId, extras);

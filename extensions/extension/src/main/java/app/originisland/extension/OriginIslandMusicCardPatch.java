@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static app.originisland.extension.MusicCardProtocol.*;
+
 /**
  * Makes YouTube Music speak the protocol of the OriginOS music card (com.vivo.musicwidgetmix).
  *
@@ -43,44 +45,6 @@ import java.util.Objects;
 public final class OriginIslandMusicCardPatch {
 
     private static final String TAG = "OriginIslandMusicCard";
-
-    private static final String MUSIC_CARD_PACKAGE = "com.vivo.musicwidgetmix";
-
-    /**
-     * Action of the media browser service the card looks for. The patch adds it to the service.
-     */
-    static final String MUSIC_CARD_SERVICE_ACTION = "com.vivo.musicwidgetmix.support.service";
-
-    /**
-     * Bit mask of what the card may show and control. Without it the card disables everything.
-     */
-    private static final String KEY_SUPPORT_EVENT = "vivomusicmix.media.metadata.support_event";
-    private static final long EVENT_PLAY_CONTROL = 1;
-    private static final long EVENT_MUSIC_INFO = 1 << 1;
-    private static final long EVENT_MUSIC_IMAGE = 1 << 2;
-    private static final long EVENT_MUSIC_LRC = 1 << 3;
-    private static final long EVENT_SEEK_POSITION = 1 << 4;
-    private static final long EVENT_FAVORITE = 1 << 6;
-    private static final long EVENT_LOOP_MODE = 1 << 7;
-    private static final long EVENT_LIST_CURRENT = 1 << 8;
-    private static final long EVENT_LIST_FAVORITE = 1 << 9;
-    private static final long EVENT_LIST_LOCAL = 1 << 10;
-
-    private static final String KEY_LOOP_MODE = "vivomusicmix.media.metadata.LOOP_MODE";
-    private static final int LOOP_MODE_LIST = 1;
-    private static final int LOOP_MODE_SINGLE = 2;
-    private static final int LOOP_MODE_RANDOM = 3;
-
-    /**
-     * Custom action the card sends with the {@link #KEY_LOOP_MODE} it wants to change to.
-     */
-    private static final String ACTION_PLAY_MODE = "vivomusicmix.media.action.PLAY_MODE";
-
-    // Session extras the card reads lyrics from. The keys are misspelled by the card.
-    private static final String EXTRA_ACTION = "vivomusicmix.meida.extra.key.action";
-    private static final String EXTRA_ACTION_LYRICS_CHANGED = "vivomusicmix.extra.lrc_change";
-    private static final String EXTRA_MEDIA_ID = "vivomusicmix.extra.key.meidia_id";
-    private static final String EXTRA_LYRICS = "vivomusicmix.extra.key.lyric";
 
     /**
      * Custom actions of the playback state the app likes a song with, or removes the like with.
@@ -107,29 +71,6 @@ public final class OriginIslandMusicCardPatch {
      * since it may not start to play from the background.
      */
     private static final long HIDE_AFTER_PLAY_DELAY_MS = 700;
-
-    private static final String BROWSER_ROOT_ID = "origin_island_music_card";
-
-    /**
-     * Media id of the entry that says a list has nothing in it. The card keeps loading
-     * a list without entries, and then says that the network failed.
-     */
-    static final String EMPTY_LIST_MEDIA_ID = "origin_island_empty_list";
-
-    /**
-     * Media browser parents of the lists, which the card loads in pages. The card reads
-     * from the extras of the last song of a page if there is another page, and its number.
-     */
-    private static final String LIST_CURRENT = "vivomusicmix_current_list";
-    private static final String LIST_FAVORITE = "vivomusicmix_favorite_list";
-    static final String LIST_LOCAL = "vivomusicmix_local_list";
-    private static final String LIST_KEY_PAGE = "vivomusicmix_key_media_page";
-    private static final String LIST_KEY_HAS_MORE = "vivomusicmix_key_has_more";
-
-    /**
-     * Extra of the list a song is played from, sent with its media id.
-     */
-    static final String KEY_LIST = "vivomusicmix_key_list";
 
     /**
      * The card only listens for lyrics once it has connected, which takes a moment.
@@ -580,33 +521,6 @@ public final class OriginIslandMusicCardPatch {
         } catch (Exception ex) {
             Log.e(TAG, "sendLibraryList failure", ex);
         }
-    }
-
-    /**
-     * @return The items of a list as the only page the card has to load of it.
-     */
-    private static List<MediaBrowser.MediaItem> toSinglePage(List<MediaDescription> descriptions) {
-        List<MediaBrowser.MediaItem> items = new ArrayList<>();
-        for (int i = 0; i < descriptions.size(); i++) {
-            MediaDescription description = descriptions.get(i);
-
-            if (i == descriptions.size() - 1) {
-                Bundle extras = new Bundle();
-                extras.putBoolean(LIST_KEY_HAS_MORE, false);
-                extras.putInt(LIST_KEY_PAGE, 1);
-
-                description = new MediaDescription.Builder()
-                        .setMediaId(description.getMediaId())
-                        .setTitle(description.getTitle())
-                        .setSubtitle(description.getSubtitle())
-                        .setExtras(extras)
-                        .build();
-            }
-
-            items.add(new MediaBrowser.MediaItem(description, MediaBrowser.MediaItem.FLAG_PLAYABLE));
-        }
-
-        return items;
     }
 
     /**
