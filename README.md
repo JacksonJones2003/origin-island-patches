@@ -184,6 +184,27 @@ YouTube Music, so the patch reads the rest from inside the app:
 
 Tested with YouTube 21.38.123.
 
+## Lyrics in player (YouTube Music)
+
+Shows the line of the lyrics that is sung in the player, below the title of the queue at the
+bottom of it:
+
+- a new line swoops in from below, and each word lights up, swells and shimmers as it is sung
+- until the first line is sung, the artist and who wrote the lyrics are named, or where the
+  lyrics are from if that is not known
+- the line is hidden while the queue is pulled up
+
+The lyrics are those of the **Third-party lyrics** patch of Morphe, which has to be applied
+and enabled. Words are only brought out one by one for lyrics that have a time for each word,
+which depends on where that patch found them. Other lyrics are shown a line at a time.
+
+### How it works
+
+The line is a view of its own that is added to the player from the main activity, found by
+the names of the views of YouTube Music, so that nothing of the player has to be patched. It
+is drawn over the header of the queue, which YouTube Music keeps below the title, unseen,
+until the queue is pulled up. The position of the song is read from the media session.
+
 ## Building locally
 
 Requires JDK 17+, the Android SDK, and a GitHub token with the `read:packages` scope

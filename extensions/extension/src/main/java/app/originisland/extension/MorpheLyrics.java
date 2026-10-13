@@ -5,6 +5,7 @@ import android.util.Log;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -26,6 +27,52 @@ final class MorpheLyrics {
         void onLyricsChanged(String lrc);
     }
 
+    /**
+     * A word of a line, or a part of one, with the time it is sung.
+     */
+    static final class Word {
+        final long startTimeMs;
+        final long endTimeMs;
+        final String text;
+        /**
+         * If the next word is apart from this one, and not another part of the same word.
+         */
+        final boolean endsWithSpace;
+
+        Word(long startTimeMs, long endTimeMs, String text, boolean endsWithSpace) {
+            this.startTimeMs = startTimeMs;
+            this.endTimeMs = endTimeMs;
+            this.text = text;
+            this.endsWithSpace = endsWithSpace;
+        }
+    }
+
+    static final class Line {
+        final long startTimeMs;
+        final String text;
+        /**
+         * Words of the line, or none if the lyrics only have the times of the lines.
+         */
+        final List<Word> words;
+
+        Line(long startTimeMs, String text, List<Word> words) {
+            this.startTimeMs = startTimeMs;
+            this.text = text;
+            this.words = words;
+        }
+    }
+
+    interface LinesListener {
+        /**
+         * Called on the main thread.
+         *
+         * @param lines Lines of the synced lyrics of the current track, or none if there are none.
+         * @param credit Who wrote the lyrics, or where they are from if that is not known.
+         *               Empty if neither is.
+         */
+        void onLyricsChanged(List<Line> lines, String credit);
+    }
+
     private static final String TAG = "OriginIslandMusicCard";
 
     private static final String LYRICS_PACKAGE = "app.morphe.extension.music.patches.lyrics.";
@@ -44,6 +91,19 @@ final class MorpheLyrics {
      * @return If the lyrics patch is applied and the listener was added to it.
      */
     static boolean addListener(Listener listener) {
+        return addListener(listener, null);
+    }
+
+    /**
+     * Must be called on the main thread.
+     *
+     * @return If the lyrics patch is applied and the listener was added to it.
+     */
+    static boolean addLinesListener(LinesListener listener) {
+        return addListener(null, listener);
+    }
+
+    private static boolean addListener(Listener listener, LinesListener linesListener) {
         try {
             Class<?> managerClass = Class.forName(LYRICS_PACKAGE + "LyricsManager");
             Class<?> listenerClass = Class.forName(LYRICS_PACKAGE + "LyricsManager$Listener");
@@ -59,7 +119,12 @@ final class MorpheLyrics {
                 switch (method.getName()) {
                     case "onLyricsChanged":
                         // onLyricsChanged(State state, Lyrics lyrics)
-                        listener.onLyricsChanged(toLrc(args[1]));
+                        if (listener != null) {
+                            listener.onLyricsChanged(toLrc(args[1]));
+                        }
+                        if (linesListener != null) {
+                            linesListener.onLyricsChanged(toLines(args[1]), toCredit(args[1]));
+                        }
                         return null;
                     // The manager keeps its listeners in a list.
                     case "equals":
@@ -83,6 +148,80 @@ final class MorpheLyrics {
         }
 
         return false;
+    }
+
+    private static String toCredit(Object lyrics) {
+        try {
+            if (lyrics == null) {
+                return "";
+            }
+
+            List<?> songwriters = (List<?>) lyrics.getClass().getMethod("songwriters").invoke(lyrics);
+            if (songwriters != null && !songwriters.isEmpty()) {
+                StringBuilder credit = new StringBuilder("Written by ");
+                for (int i = 0; i < songwriters.size(); i++) {
+                    credit.append(i == 0 ? "" : ", ").append(songwriters.get(i));
+                }
+                return credit.toString();
+            }
+
+            String provider = (String) lyrics.getClass().getMethod("providerName").invoke(lyrics);
+            if (provider != null && !provider.trim().isEmpty()) {
+                return "Lyrics from " + provider.trim();
+            }
+        } catch (Exception ex) {
+            // The credit is left out.
+        }
+
+        return "";
+    }
+
+    private static List<Line> toLines(Object lyrics) {
+        List<Line> lines = new ArrayList<>();
+        try {
+            if (lyrics == null || !((boolean) lyricsSynced.invoke(lyrics))) {
+                return lines;
+            }
+
+            for (Object line : (List<?>) lyricsLines.invoke(lyrics)) {
+                long startTimeMs = (long) lineStartTimeMs.invoke(line);
+                String text = (String) lineText.invoke(line);
+                if (startTimeMs < 0 || text == null || text.trim().isEmpty()) {
+                    continue;
+                }
+
+                lines.add(new Line(startTimeMs, text.replace('\n', ' ').trim(), toWords(line)));
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "Could not read the lyrics", ex);
+        }
+
+        return lines;
+    }
+
+    /**
+     * @return The words of a line, or none if they have no times or cannot be read.
+     */
+    private static List<Word> toWords(Object line) {
+        List<Word> words = new ArrayList<>();
+        try {
+            for (Object word : (List<?>) line.getClass().getMethod("words").invoke(line)) {
+                Class<?> wordClass = word.getClass();
+                long startTimeMs = (long) wordClass.getMethod("startMs").invoke(word);
+                long endTimeMs = (long) wordClass.getMethod("endMs").invoke(word);
+                String text = (String) wordClass.getMethod("text").invoke(word);
+                boolean endsWithSpace = (boolean) wordClass.getMethod("endsWithSpace").invoke(word);
+                if (startTimeMs < 0 || endTimeMs < startTimeMs || text == null) {
+                    return new ArrayList<>();
+                }
+
+                words.add(new Word(startTimeMs, endTimeMs, text, endsWithSpace || text.endsWith(" ")));
+            }
+        } catch (Exception ex) {
+            return new ArrayList<>();
+        }
+
+        return words;
     }
 
     private static String toLrc(Object lyrics) {
