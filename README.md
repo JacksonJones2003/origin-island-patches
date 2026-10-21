@@ -206,6 +206,18 @@ the names of the views of YouTube Music, so that nothing of the player has to be
 is drawn over the header of the queue, which YouTube Music keeps below the title, unseen,
 until the queue is pulled up. The position of the song is read from the media session.
 
+## Pause on fold (YouTube, YouTube Music)
+
+Pauses what plays when a foldable phone is closed, the way a laptop does when its lid is closed.
+Playing on the cover screen of a closed phone is not paused, only closing it.
+
+### How it works
+
+Foldable phones report the angle between their halves with a hinge angle sensor of Android.
+While a session of the app plays, the patch listens to it, and pauses the session once the angle
+drops below 15 degrees after it was above 45. The sensor only reports as the angle changes, and
+it is not listened to while nothing plays.
+
 ## Building locally
 
 Requires JDK 17+, the Android SDK, and a GitHub token with the `read:packages` scope
