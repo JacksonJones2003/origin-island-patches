@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.4.0...v1.5.0) (2026-10-21)
+
+### ✨ New Features
+
+* Add Pause on fold patch for YouTube and YouTube Music ([d4c6dfe](https://github.com/JacksonJones2003/origin-island-patches/commit/d4c6dfe174a9cade01d6afc3567627e28b4e1f25))
+
 ## [1.4.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.3.0...v1.4.0) (2026-10-13)
 
 ### ✨ New Features
