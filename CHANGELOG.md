@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.6.0...v1.7.0) (2026-10-27)
+
+### ✨ New Features
+
+* Add Origin Island music card patch for LastWave ([7d2bc10](https://github.com/JacksonJones2003/origin-island-patches/commit/7d2bc103870dac3edb2815db2f6a9e3cb558fa93))
+
 ## [1.6.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.5.0...v1.6.0) (2026-10-27)
 
 ### ✨ New Features
