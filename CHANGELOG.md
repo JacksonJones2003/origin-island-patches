@@ -1,3 +1,10 @@
+## [1.9.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.8.0...v1.9.0) (2026-10-27)
+
+### ✨ New Features
+
+* **LastWave:** show lyrics on the music card ([168d977](https://github.com/JacksonJones2003/origin-island-patches/commit/168d97789d2c1e2e18adfbde1204e2600b990ac6))
+* **YouTube Music:** run the lyrics in the player a little ahead of the song ([a5cf441](https://github.com/JacksonJones2003/origin-island-patches/commit/a5cf441e3090c3aa040ace1289a69194950b173d))
+
 ## [1.8.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.7.0...v1.8.0) (2026-10-27)
 
 ### 🐛 Bug Fixes
