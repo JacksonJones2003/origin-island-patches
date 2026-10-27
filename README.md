@@ -189,24 +189,30 @@ Tested with YouTube 21.38.123.
 
 ## Lyrics in player (YouTube Music)
 
-Shows the line of the lyrics that is sung in the player, below the title of the queue at the
-bottom of it:
+Shows the line of the lyrics that is sung in the player, between the cover and the title:
 
-- a new line swoops in from below, and each word lights up, swells and shimmers as it is sung
-- until the first line is sung, the artist and who wrote the lyrics are named, or where the
-  lyrics are from if that is not known
-- the line is hidden while the queue is pulled up
+- a new line rises into place as the line before it rises away, and each word fills with
+  light and lifts a little as it is sung
+- until the first line is sung, who wrote the song is named, or the artist if that is not known
+- a line that does not fit in one row is wrapped, and drawn smaller if it does not fit in two
+
+The player is given more room below the cover for the line, taken from the room above the
+cover and below the controls, so that the cover keeps its size.
 
 The lyrics are those of the **Third-party lyrics** patch of Morphe, which has to be applied
-and enabled. Words are only brought out one by one for lyrics that have a time for each word,
-which depends on where that patch found them. Other lyrics are shown a line at a time.
+and enabled, and only lyrics with the time of each line can be shown. Words are only brought
+out one by one for lyrics that have a time for each word, which depends on where that patch
+found them. That patch keeps the lyrics it found for a song on the device, so after its
+sources are changed, its stored lyrics have to be cleared for a song to be looked up again.
 
 ### How it works
 
 The line is a view of its own that is added to the player from the main activity, found by
-the names of the views of YouTube Music, so that nothing of the player has to be patched. It
-is drawn over the header of the queue, which YouTube Music keeps below the title, unseen,
-until the queue is pulled up. The position of the song is read from the media session.
+the names of the views of YouTube Music, so that nothing of the player has to be patched.
+YouTube Music places the cover and the title by moving them, so the line is placed in the room
+between them every time the player is drawn, and fades with the title as the player is pulled
+down. The room is made by changing the sizes of the resources YouTube Music lays out the
+player with. The position of the song is read from the media session.
 
 ## Pause on fold (YouTube, YouTube Music)
 
