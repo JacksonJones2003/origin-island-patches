@@ -53,6 +53,12 @@ public final class PlayerLyricsPatch {
 
     private static final Object VIEW_TAG = new Object();
 
+    /**
+     * How far ahead of the song the lyrics run, so a line and its words come in as they are sung
+     * rather than just after.
+     */
+    private static final long LYRICS_LEAD_MS = 250;
+
     private static final long UPDATE_INTERVAL_MS = 100;
     private static final long UPDATE_INTERVAL_HIDDEN_MS = 1_000;
 
@@ -255,7 +261,7 @@ public final class PlayerLyricsPatch {
                     * state.getPlaybackSpeed());
         }
 
-        return position;
+        return position + LYRICS_LEAD_MS;
     }
 
     /**
