@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "patches": [
     {
       "name": "Lyrics in player",
@@ -37,7 +37,7 @@
     },
     {
       "name": "Origin Island music card",
-      "description": "Lets the OriginOS music card on the lock screen and Origin Island switch between repeat and shuffle, and show the playlist and play from it.",
+      "description": "Lets the OriginOS music card on the lock screen and Origin Island like songs, switch between repeat and shuffle, and show the playlist and play from it.",
       "default": true,
       "category": null,
       "compatiblePackages": [

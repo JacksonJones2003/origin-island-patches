@@ -1,3 +1,13 @@
+## [1.8.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.7.0...v1.8.0) (2026-10-27)
+
+### 🐛 Bug Fixes
+
+* **LastWave:** let the app reach the likes of the card ([f99ee94](https://github.com/JacksonJones2003/origin-island-patches/commit/f99ee94d8efbeb630b57b2c83df7866c9ebf9d03))
+
+### ✨ New Features
+
+* **LastWave:** like songs from the heart of the music card ([0902a9b](https://github.com/JacksonJones2003/origin-island-patches/commit/0902a9bad3a0550348db7db78abbe3c621985f73))
+
 ## [1.7.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.6.0...v1.7.0) (2026-10-27)
 
 ### ✨ New Features

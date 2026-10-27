@@ -21,7 +21,7 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.7.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.7.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;7 patches total
+> **[v1.8.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.8.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;7 patches total
 <details open>
 <summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
@@ -50,7 +50,7 @@ risk. See the [license](LICENSE) for details.
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island switch between repeat and shuffle, and show the playlist and play from it. |  |
+| [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island like songs, switch between repeat and shuffle, and show the playlist and play from it. |  |
 | [Pause on fold](#pause-on-fold) | Pauses what plays when a foldable phone is closed. |  |
 
 </details>
