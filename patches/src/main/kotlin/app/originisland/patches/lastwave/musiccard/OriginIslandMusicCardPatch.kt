@@ -59,8 +59,8 @@ private val lastWaveMusicCardServiceResourcePatch = resourcePatch {
 @Suppress("unused")
 val lastWaveMusicCardPatch = bytecodePatch(
     name = "Origin Island music card",
-    description = "Lets the OriginOS music card on the lock screen and Origin Island switch between " +
-            "repeat and shuffle, and show the playlist and play from it.",
+    description = "Lets the OriginOS music card on the lock screen and Origin Island like songs, " +
+            "switch between repeat and shuffle, and show the playlist and play from it.",
     default = true
 ) {
     compatibleWith(COMPATIBILITY_LASTWAVE)
@@ -134,6 +134,8 @@ val lastWaveMusicCardPatch = bytecodePatch(
                 }
             }
         }
+
+        addLastWaveLikes(EXTENSION_CLASS)
 
         // These hooks handle what the music card sends and let the app handle everything else.
         MediaSessionCallbackOnCustomActionFingerprint.matchAll().forEach { match ->

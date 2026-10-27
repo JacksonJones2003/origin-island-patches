@@ -29,8 +29,9 @@ import java.util.concurrent.Executors;
 
 /**
  * Makes LastWave speak the protocol of the OriginOS music card (com.vivo.musicwidgetmix):
- * the song, the playlist, which is the queue of the session, and the loop mode button,
- * which is the repeat and the shuffle mode of the session.
+ * the song, the heart button, which likes the song the way LastWave does, the playlist,
+ * which is the queue of the session, and the loop mode button, which is the repeat and
+ * the shuffle mode of the session.
  *
  * The card draws the cover from the image in the metadata, and only reads the address of the
  * cover from files of the device. LastWave gives the cover by its address on the web, and an
@@ -85,6 +86,15 @@ public final class LastWaveMusicCardPatch {
      */
     private static MediaMetadata lastMetadata;
     private static String trackId = "";
+    private static Boolean likedPublished;
+
+    /**
+     * A like is toggled in the background, and LastWave can change it as well,
+     * so it is checked again this often while the card is connected.
+     */
+    private static final long LIKE_CHECK_INTERVAL_MS = 1_500;
+    private static final Runnable checkLikeTask = LastWaveMusicCardPatch::checkLike;
+    private static boolean cardConnected;
 
     private LastWaveMusicCardPatch() {
     }
@@ -103,6 +113,10 @@ public final class LastWaveMusicCardPatch {
         }
 
         mainHandler.postDelayed(publishLastMetadataTask, PUBLISH_AFTER_CONNECTING_DELAY_MS);
+        if (!cardConnected) {
+            cardConnected = true;
+            mainHandler.postDelayed(checkLikeTask, LIKE_CHECK_INTERVAL_MS);
+        }
         return new MediaBrowserService.BrowserRoot(BROWSER_ROOT_ID, null);
     }
 
@@ -152,6 +166,42 @@ public final class LastWaveMusicCardPatch {
         }
 
         return metadata;
+    }
+
+    /**
+     * Injection point. The card sends a heart rating for its heart button.
+     */
+    public static Rating onSetRating(Rating rating) {
+        try {
+            if (rating == null || rating.getRatingStyle() != Rating.RATING_HEART) {
+                return rating;
+            }
+
+            Boolean liked = LastWaveLikes.isLiked();
+            Log.i(TAG, "Heart rating received: " + rating.hasHeart() + ", liked: " + liked);
+            if (liked != null && liked != rating.hasHeart() && LastWaveLikes.toggleLike()) {
+                // The like is toggled in the background.
+                mainHandler.postDelayed(checkLikeTask, 400);
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "onSetRating failure", ex);
+        }
+
+        return rating;
+    }
+
+    private static void checkLike() {
+        try {
+            Boolean liked = LastWaveLikes.isLiked();
+            if (liked != null && !liked.equals(likedPublished)) {
+                publishLastMetadataSoon();
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "checkLike failure", ex);
+        }
+
+        mainHandler.removeCallbacks(checkLikeTask);
+        mainHandler.postDelayed(checkLikeTask, LIKE_CHECK_INTERVAL_MS);
     }
 
     /**
@@ -476,6 +526,9 @@ public final class LastWaveMusicCardPatch {
         long supportEvent = EVENT_PLAY_CONTROL | EVENT_MUSIC_INFO | EVENT_MUSIC_IMAGE
                 | EVENT_SEEK_POSITION | EVENT_LIST_CURRENT;
 
+        Boolean liked = LastWaveLikes.isLiked();
+        likedPublished = liked;
+
         Bitmap cover = getDrawableCover(metadata);
 
         // The card prefers the address of the cover, and can only read it from a file of the
@@ -489,6 +542,11 @@ public final class LastWaveMusicCardPatch {
             builder.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, cover);
             builder.putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, cover);
             builder.putBitmap(MediaMetadata.METADATA_KEY_ART, cover);
+        }
+
+        if (liked != null) {
+            supportEvent |= EVENT_FAVORITE;
+            builder.putRating(MediaMetadata.METADATA_KEY_RATING, Rating.newHeartRating(liked));
         }
 
         if (playModes != null && playModes.isKnown()) {
