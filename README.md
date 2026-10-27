@@ -241,8 +241,7 @@ with the music apps vivo supports:
 - the heart button likes the song, and is filled when the song is in the liked songs of LastWave.
   Liking it in LastWave fills it on the card as well
 - the playlist shows the queue, and plays the song that is tapped
-
-Lyrics are not supported yet.
+- the lyrics LastWave loads for the song are shown, line by line
 
 LastWave is installed from its own APK, so the patched LastWave is signed by Morphe Manager and
 not by its developers. The first time it is installed, the LastWave that was installed before has to
@@ -261,6 +260,9 @@ LastWave keeps its liked songs in a manager that it toggles a like with in a cor
 obfuscated, so the patch finds the manager, the toggle and how a coroutine is started by the text they
 log and by how they call each other, and the heart of the card toggles the like the same way the heart
 of LastWave does.
+
+The lyrics are taken as the player of LastWave keeps the lyrics it loaded for the song that plays,
+and are given to the card as LRC once the card has that song.
 
 The card draws the cover from the image in the metadata, but prefers the address of the cover, and
 can only read that address from files of the device. LastWave gives the cover by its address on the
