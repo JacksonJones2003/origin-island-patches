@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.5.0...v1.6.0) (2026-10-27)
+
+### ✨ New Features
+
+* Show the lyrics between the cover and the title in the player ([06429bd](https://github.com/JacksonJones2003/origin-island-patches/commit/06429bd70ed8c533fb6b5bd3346065e9ffb5409f))
+
 ## [1.5.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.4.0...v1.5.0) (2026-10-21)
 
 ### ✨ New Features

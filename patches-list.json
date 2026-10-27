@@ -1,10 +1,10 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "patches": [
     {
       "name": "Lyrics in player",
-      "description": "Shows the line of the lyrics that is sung below the title of the queue in the player. Requires the Third-party lyrics patch.",
+      "description": "Shows the line of the lyrics that is sung between the cover and the title in the player. Requires the Third-party lyrics patch.",
       "default": true,
       "category": null,
       "compatiblePackages": [
