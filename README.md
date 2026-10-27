@@ -214,7 +214,36 @@ between them every time the player is drawn, and fades with the title as the pla
 down. The room is made by changing the sizes of the resources YouTube Music lays out the
 player with. The position of the song is read from the media session.
 
-## Pause on fold (YouTube, YouTube Music)
+## Origin Island music card (LastWave)
+
+Makes the OriginOS music card work with LastWave the way it does
+with the music apps vivo supports:
+
+- the cover, the song and the playback controls are shown
+- the loop mode button switches between repeat all, repeat one and shuffle. LastWave can repeat
+  and shuffle at the same time, which the card has no mode for, so each turns the other off
+- the playlist shows the queue, and plays the song that is tapped
+
+The heart button and lyrics are not supported yet.
+
+LastWave is installed from its own APK, so the patched LastWave is signed by Morphe Manager and
+not by its developers. The first time it is installed, the LastWave that was installed before has to
+be uninstalled, which removes its library, playlists and settings from the phone. Updates of
+LastWave are then installed by patching them as well. Restart the phone once after installing,
+since the card only looks for apps that support these features when it starts.
+
+### How it works
+
+The patch declares the action the card looks for on the media browser service of LastWave, answers
+the card when it connects, and adds to the metadata what the card may show and control. It only hooks
+calls of the Android framework, which have the same names in every version of LastWave.
+
+The card draws the cover from the image in the metadata, but prefers the address of the cover, and
+can only read that address from files of the device. LastWave gives the cover by its address on the
+web, so the card is given the cover as an image without its address. The cover is loaded from its
+address, since the image LastWave gives the session may only stand in for it while it loads.
+
+## Pause on fold (YouTube, YouTube Music, LastWave)
 
 Pauses what plays when a foldable phone is closed, the way a laptop does when its lid is closed.
 Playing on the cover screen of a closed phone is not paused, only closing it.
