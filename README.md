@@ -243,6 +243,10 @@ with the music apps vivo supports:
 - the playlist shows the queue, and plays the song that is tapped
 - the lyrics LastWave loads for the song are shown, line by line
 
+The patch also lets LastWave play a song asked for by voice when Android Auto prepares it before
+playing it, which LastWave ignored. Gemini only asks the music apps it works with for a song, so
+in the car it starts LastWave, but only plays a song asked for by name in apps such as YouTube Music.
+
 LastWave is installed from its own APK, so the patched LastWave is signed by Morphe Manager and
 not by its developers. The first time it is installed, the LastWave that was installed before has to
 be uninstalled, which removes its library, playlists and settings from the phone. Updates of

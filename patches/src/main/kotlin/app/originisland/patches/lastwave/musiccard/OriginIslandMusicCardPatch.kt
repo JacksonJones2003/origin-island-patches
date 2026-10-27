@@ -137,6 +137,7 @@ val lastWaveMusicCardPatch = bytecodePatch(
 
         addLastWaveLikes(EXTENSION_CLASS)
         addLastWaveLyrics()
+        addLastWaveVoiceSearch()
 
         // These hooks handle what the music card sends and let the app handle everything else.
         MediaSessionCallbackOnCustomActionFingerprint.matchAll().forEach { match ->
