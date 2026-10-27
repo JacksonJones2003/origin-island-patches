@@ -96,6 +96,13 @@ public final class LastWaveMusicCardPatch {
     private static final Runnable checkLikeTask = LastWaveMusicCardPatch::checkLike;
     private static boolean cardConnected;
 
+    /**
+     * The lyrics LastWave loaded last, as LRC, and the media id of the song they are for.
+     */
+    private static String lyrics = "";
+    private static String lyricsFor = "";
+    private static final Runnable sendLyricsTask = LastWaveMusicCardPatch::sendLyrics;
+
     private LastWaveMusicCardPatch() {
     }
 
@@ -113,6 +120,8 @@ public final class LastWaveMusicCardPatch {
         }
 
         mainHandler.postDelayed(publishLastMetadataTask, PUBLISH_AFTER_CONNECTING_DELAY_MS);
+        // The card only listens for lyrics once it has connected.
+        mainHandler.postDelayed(sendLyricsTask, PUBLISH_AFTER_CONNECTING_DELAY_MS);
         if (!cardConnected) {
             cardConnected = true;
             mainHandler.postDelayed(checkLikeTask, LIKE_CHECK_INTERVAL_MS);
@@ -158,6 +167,9 @@ public final class LastWaveMusicCardPatch {
                 if (browserService != null) {
                     browserService.notifyChildrenChanged(LIST_CURRENT);
                 }
+
+                // Sent after the metadata, so the card has the song the lyrics are for.
+                mainHandler.post(sendLyricsTask);
             }
 
             return withMusicCardKeys(metadata);
@@ -342,11 +354,46 @@ public final class LastWaveMusicCardPatch {
     /**
      * The same song gets the same media id in the metadata and in the queue.
      */
-    private static String mediaIdOf(CharSequence title, CharSequence artist) {
+    static String mediaIdOf(CharSequence title, CharSequence artist) {
         return Integer.toHexString(Objects.hash(
                 title == null ? null : title.toString(),
                 artist == null ? null : artist.toString()
         ));
+    }
+
+    static synchronized void onLyricsChanged(String mediaId, String lrc) {
+        if (!lrc.equals(lyrics) || !mediaId.equals(lyricsFor)) {
+            lyrics = lrc;
+            lyricsFor = mediaId;
+            // The app may still be about to publish the song these lyrics are for.
+            mainHandler.post(sendLyricsTask);
+        }
+    }
+
+    /**
+     * Sends the lyrics of the song that plays, or none if LastWave has not loaded them yet.
+     */
+    private static synchronized void sendLyrics() {
+        try {
+            MediaSession session = sessionRef.get();
+            if (session == null) {
+                return;
+            }
+
+            String lrc = trackId.equals(lyricsFor) ? lyrics : "";
+
+            // The app keeps extras of its own on the session.
+            Bundle appExtras = session.getController().getExtras();
+            Bundle extras = appExtras == null ? new Bundle() : new Bundle(appExtras);
+            extras.putString(EXTRA_ACTION, EXTRA_ACTION_LYRICS_CHANGED);
+            extras.putString(EXTRA_MEDIA_ID, trackId);
+            extras.putString(EXTRA_LYRICS, lrc);
+            session.setExtras(extras);
+
+            Log.i(TAG, "Lyrics sent: " + lrc.length() + " characters");
+        } catch (Exception ex) {
+            Log.e(TAG, "sendLyrics failure", ex);
+        }
     }
 
     private static void attachSession(MediaSession session) {
@@ -524,7 +571,7 @@ public final class LastWaveMusicCardPatch {
 
     private static MediaMetadata withMusicCardKeys(MediaMetadata metadata) {
         long supportEvent = EVENT_PLAY_CONTROL | EVENT_MUSIC_INFO | EVENT_MUSIC_IMAGE
-                | EVENT_SEEK_POSITION | EVENT_LIST_CURRENT;
+                | EVENT_SEEK_POSITION | EVENT_LIST_CURRENT | EVENT_MUSIC_LRC;
 
         Boolean liked = LastWaveLikes.isLiked();
         likedPublished = liked;
