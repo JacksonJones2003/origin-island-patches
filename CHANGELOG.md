@@ -1,3 +1,9 @@
+## [1.9.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.9.0...v1.9.1) (2026-10-27)
+
+### 🐛 Bug Fixes
+
+* **LastWave:** play the song Android Auto prepares from a voice search ([63296ba](https://github.com/JacksonJones2003/origin-island-patches/commit/63296bad0ca8e11bcf3c01e2ea9a8e1d4a7567cb))
+
 ## [1.9.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.8.0...v1.9.0) (2026-10-27)
 
 ### ✨ New Features
