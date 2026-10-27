@@ -16,7 +16,7 @@ import java.util.Set;
  * Its classes are obfuscated, so the patch fills the bridges below with calls to them.
  */
 @SuppressWarnings("unused")
-final class LastWaveLikes {
+public final class LastWaveLikes {
 
     private static final String TAG = "OriginIslandLastWave";
 
