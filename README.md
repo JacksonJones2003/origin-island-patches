@@ -21,7 +21,24 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.9.1](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.9.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;7 patches total
+> **[v1.10.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.10.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;8 patches total
+<details open>
+<summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 21.38.123 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Comments under the video](#comments-under-the-video) | Shows the comments under the video in the wide layout, as on an opened foldable phone held sideways, instead of over the suggested videos. |  |
+| [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island like videos, show the captions of a video as its lyrics, and show what plays next as the playlist. |  |
+| [Pause on fold](#pause-on-fold) | Pauses what plays when a foldable phone is closed. |  |
+
+</details>
+
 <details open>
 <summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
@@ -51,22 +68,6 @@ risk. See the [license](LICENSE) for details.
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island show lyrics, like songs, switch between repeat and shuffle, and show the playlist and play from it. |  |
-| [Pause on fold](#pause-on-fold) | Pauses what plays when a foldable phone is closed. |  |
-
-</details>
-
-<details open>
-<summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
-<br>
-
-**🎯 Supported versions:**
-
-| 21.38.123 |
-| :---: |
-
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island like videos, show the captions of a video as its lyrics, and show what plays next as the playlist. |  |
 | [Pause on fold](#pause-on-fold) | Pauses what plays when a foldable phone is closed. |  |
 
 </details>
