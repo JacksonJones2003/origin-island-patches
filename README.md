@@ -273,6 +273,30 @@ can only read that address from files of the device. LastWave gives the cover by
 web, so the card is given the cover as an image without its address. The cover is loaded from its
 address, since the image LastWave gives the session may only stand in for it while it loads.
 
+## Comments under the video (YouTube)
+
+In the wide layout of YouTube, as on an opened foldable phone held sideways, the comments of a
+video open over the suggested videos, and the space under the title and buttons stays empty.
+The patch shows the comments in that space instead:
+
+- the comments open under the title and buttons as a video is opened, where their teaser was,
+  and the suggested videos stay in view next to them
+- scrolling there scrolls the comments, and the title and buttons stay on the screen
+- dragging the header of the comments up expands them over the title and buttons, and dragging
+  it down brings those back
+- closed comments stay closed until another video is opened
+- the description and the other panels of a video open under it as well
+
+The comments are opened by their teaser, which is found by the word "Comments", so they only
+open by themselves while YouTube is in English.
+
+### How it works
+
+The watch page lays out its parts itself: it measures each for its space, places it there with
+an offset, and clips it there as it draws it. The patch has the panels measured, placed and drawn
+for the space under the player instead, ends them at the bottom of the screen, and keeps the
+suggested videos shown and undimmed while a panel would cover them.
+
 ## Pause on fold (YouTube, YouTube Music, LastWave)
 
 Pauses what plays when a foldable phone is closed, the way a laptop does when its lid is closed.
