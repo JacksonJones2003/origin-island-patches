@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "patches": [
     {
       "name": "Comments under the video",
@@ -165,7 +165,20 @@
           ]
         }
       ],
-      "options": []
+      "options": [
+        {
+          "key": "packageName",
+          "title": "Package name",
+          "description": "The package to install this copy of YouTube Music under.",
+          "required": true,
+          "type": "kotlin.String",
+          "default": "Keep",
+          "values": {
+            "Keep the package of YouTube Music": "Keep",
+            "Luna Music, to be offered by the card while nothing plays": "com.luna.music"
+          }
+        }
+      ]
     },
     {
       "name": "Origin Island music card",

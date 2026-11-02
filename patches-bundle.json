@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-02T21:58:58",
-  "description": "## [1.11.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.0...v1.11.1) (2026-11-02)\n\n### 🐛 Bug Fixes\n\n* **Apple Music:** switch to the song that is played from a list of the music card ([5e79638](https://github.com/JacksonJones2003/origin-island-patches/commit/5e79638cdb050e1a6ffd63586aa4853c507ca810))",
-  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.11.1/patches-1.11.1.mpp",
+  "created_at": "2026-11-02T23:25:03",
+  "description": "## [1.12.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.1...v1.12.0) (2026-11-02)\n\n### ✨ New Features\n\n* **YouTube Music:** add an option to install under the package of Luna Music ([a7c03f8](https://github.com/JacksonJones2003/origin-island-patches/commit/a7c03f84ced3c581e8445cfe6a998d412eb5b5f0))",
+  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.12.0/patches-1.12.0.mpp",
   "signature_download_url": "",
-  "version": "1.11.1"
+  "version": "1.12.0"
 }

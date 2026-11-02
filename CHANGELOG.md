@@ -1,3 +1,9 @@
+## [1.12.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.1...v1.12.0) (2026-11-02)
+
+### ✨ New Features
+
+* **YouTube Music:** add an option to install under the package of Luna Music ([a7c03f8](https://github.com/JacksonJones2003/origin-island-patches/commit/a7c03f84ced3c581e8445cfe6a998d412eb5b5f0))
+
 ## [1.11.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.0...v1.11.1) (2026-11-02)
 
 ### 🐛 Bug Fixes
