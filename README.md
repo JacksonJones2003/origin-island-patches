@@ -322,6 +322,10 @@ you have to sign in again. Your library and playlists are kept by your account.
 Apple Music on the phone comes as a split APK, so patch the full set of its parts. Restart the phone
 once after installing, since the card only looks for apps that support these features when it starts.
 
+Playing a song from the favorites or download list replaces the queue. The card only connects to the
+app once it plays or a control of the card is pressed, so the playlist button stays dimmed until then,
+also while Apple Music is closed. Pressing play on the card starts the music and connects it.
+
 The favorites list reads names of Apple Music 7.0.0 that are obfuscated, so it is expected to stop
 working with other versions, and then shows the playlist of favorites as one entry. The list stops at
 300 songs.

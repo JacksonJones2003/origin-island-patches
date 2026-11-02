@@ -1,11 +1,14 @@
 package app.originisland.patches.applemusic.musiccard
 
+import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.string
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.originisland.patches.shared.Constants.COMPATIBILITY_APPLE_MUSIC
 import app.originisland.patches.shared.mediasession.MediaBrowserServiceOnGetRootFingerprint
@@ -17,7 +20,12 @@ import app.originisland.patches.shared.mediasession.MediaSessionConstructorFinge
 import app.originisland.patches.shared.mediasession.MediaSessionSetMetadataFingerprint
 import app.originisland.patches.shared.mediasession.addMusicCardHook
 import app.originisland.patches.shared.mediasession.indicesOfCalls
+import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import org.w3c.dom.Element
 
 private const val EXTENSION_PACKAGE = "Lapp/originisland/extension/"
@@ -33,6 +41,24 @@ private const val PLAYBACK_SERVICE = "com.apple.android.music.player.MediaPlayba
  * a media browser service that declares this action. Every other app gets a controller without them.
  */
 private const val MUSIC_CARD_SERVICE_ACTION = "com.vivo.musicwidgetmix.support.service"
+
+private const val QUEUE_INSERTION_TYPE_KEY =
+    "com.apple.android.music.playback.action.ARGUMENT_PLAYBACK_QUEUE_INSERTION_TYPE"
+
+/**
+ * PlaybackQueueInsertionType.INSERTION_TYPE_CLEAR_AND_REPLACE
+ */
+private const val QUEUE_INSERTION_CLEAR_AND_REPLACE = "0x5"
+
+/**
+ * `MediaSession.Callback.onSetMediaItems(session, controller, mediaItems, startIndex, startPositionMs)`.
+ */
+private object AppleMusicSetMediaItemsFingerprint : Fingerprint(
+    filters = listOf(string(QUEUE_INSERTION_TYPE_KEY)),
+    custom = { method, _ ->
+        method.parameterTypes.size == 5 && method.parameterTypes[3] == "I" && method.parameterTypes[4] == "J"
+    }
+)
 
 private val appleMusicCardServiceResourcePatch = resourcePatch {
     execute {
@@ -140,6 +166,22 @@ val appleMusicCardPatch = bytecodePatch(
                     )
                 }
             }
+        }
+
+        // The card can not say how an item it plays goes in the queue. What Apple Music does for that
+        // keeps the song that plays going while the queue changes, so it clears the queue instead,
+        // as the items it lists itself ask for. An item that says how it goes in the queue still does.
+        AppleMusicSetMediaItemsFingerprint.method.apply {
+            val keyIndex = implementation!!.instructions.indexOfFirst {
+                ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == QUEUE_INSERTION_TYPE_KEY
+            }
+            val defaultIndex = (keyIndex downTo 0).firstOrNull { index ->
+                val instruction = getInstruction(index)
+                instruction.opcode == Opcode.CONST_4 && (instruction as WideLiteralInstruction).wideLiteral == 1L
+            } ?: throw PatchException("Could not find the default way an item goes in the queue")
+
+            val register = getInstruction<OneRegisterInstruction>(defaultIndex).registerA
+            replaceInstruction(defaultIndex, "const/4 v$register, $QUEUE_INSERTION_CLEAR_AND_REPLACE")
         }
 
         // These hooks handle what the music card sends and let the app handle everything else.

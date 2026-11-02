@@ -384,12 +384,23 @@ public final class AppleMusicCardPatch {
     private static synchronized void publishLastMetadata() {
         try {
             MediaSession session = sessionRef.get();
-            if (session != null && lastMetadata != null) {
-                session.setMetadata(withMusicCardKeys(lastMetadata));
+            if (session != null) {
+                session.setMetadata(lastMetadata == null ? nothingLoaded() : withMusicCardKeys(lastMetadata));
             }
         } catch (Exception ex) {
             Log.e(TAG, "publishLastMetadata failure", ex);
         }
+    }
+
+    /**
+     * The card only offers the lists of an app that says it has them, which it reads from the
+     * metadata, so this is said while no song is loaded as well.
+     */
+    private static MediaMetadata nothingLoaded() {
+        return new MediaMetadata.Builder()
+                .putLong(KEY_SUPPORT_EVENT, EVENT_PLAY_CONTROL | EVENT_MUSIC_INFO | EVENT_MUSIC_IMAGE
+                        | EVENT_LIST_CURRENT | EVENT_LIST_FAVORITE | EVENT_LIST_LOCAL)
+                .build();
     }
 
     private static MediaMetadata withMusicCardKeys(MediaMetadata metadata) {
@@ -398,7 +409,7 @@ public final class AppleMusicCardPatch {
         String album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM);
         long duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION);
         if (title == null) {
-            return metadata;
+            return nothingLoaded();
         }
 
         // The card ignores a song change unless the media id changes as well.
