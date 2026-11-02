@@ -21,7 +21,7 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.11.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.11.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;9 patches total
+> **[v1.11.1](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.11.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;9 patches total
 <details open>
 <summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>

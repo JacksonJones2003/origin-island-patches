@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-02T18:11:00",
-  "description": "## [1.11.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.10.1...v1.11.0) (2026-11-02)\n\n### ✨ New Features\n\n* Add Origin Island music card patch for Apple Music ([328021c](https://github.com/JacksonJones2003/origin-island-patches/commit/328021c1cddbdccbb22bbc600c676448579c22b6))",
-  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.11.0/patches-1.11.0.mpp",
+  "created_at": "2026-11-02T21:58:58",
+  "description": "## [1.11.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.0...v1.11.1) (2026-11-02)\n\n### 🐛 Bug Fixes\n\n* **Apple Music:** switch to the song that is played from a list of the music card ([5e79638](https://github.com/JacksonJones2003/origin-island-patches/commit/5e79638cdb050e1a6ffd63586aa4853c507ca810))",
+  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.11.1/patches-1.11.1.mpp",
   "signature_download_url": "",
-  "version": "1.11.0"
+  "version": "1.11.1"
 }

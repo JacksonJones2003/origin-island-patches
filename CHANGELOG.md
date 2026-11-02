@@ -1,3 +1,9 @@
+## [1.11.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.0...v1.11.1) (2026-11-02)
+
+### 🐛 Bug Fixes
+
+* **Apple Music:** switch to the song that is played from a list of the music card ([5e79638](https://github.com/JacksonJones2003/origin-island-patches/commit/5e79638cdb050e1a6ffd63586aa4853c507ca810))
+
 ## [1.11.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.10.1...v1.11.0) (2026-11-02)
 
 ### ✨ New Features
