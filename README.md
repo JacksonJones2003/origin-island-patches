@@ -120,8 +120,10 @@ started, while YouTube Music loads the library.
 
 The card only lists the apps of a list of its own to pick from while nothing plays, and
 YouTube Music is not one of them. A second, patched copy of YouTube Music that is installed
-under the package of one that is, such as `com.luna.music`, can be picked there. For such a
-copy the patch does the following:
+under the package of one that is, such as `com.luna.music`, can be picked there. To make one,
+patch YouTube Music with the **Package name** option of the **Origin Island music card** patch
+set to Luna Music. It installs next to YouTube Music, and cannot be installed next to the real
+Luna Music. For such a copy the patch does the following:
 
 - the card opens the copy to have it play, and the copy then resumes what it last played
   and moves out of view again
