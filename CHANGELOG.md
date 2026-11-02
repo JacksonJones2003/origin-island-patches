@@ -1,3 +1,9 @@
+## [1.11.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.10.1...v1.11.0) (2026-11-02)
+
+### ✨ New Features
+
+* Add Origin Island music card patch for Apple Music ([328021c](https://github.com/JacksonJones2003/origin-island-patches/commit/328021c1cddbdccbb22bbc600c676448579c22b6))
+
 ## [1.10.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.10.0...v1.10.1) (2026-10-30)
 
 ### 🐛 Bug Fixes
