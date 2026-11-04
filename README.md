@@ -388,6 +388,10 @@ Lets the Jovi voice assistant of vivo play a song asked for by voice, such as
 vivo can warn about the copy as it is installed, since it has the package of QQ Music without its
 signature; keep the app to use it. The real QQ Music cannot be installed next to the copy.
 
+While the copy plays, the music card and Origin Island show it as they show QQ Music: the card asks
+the copy for the song, its cover, whether it plays and how far, which the copy answers with what
+YouTube Music plays.
+
 Jovi puts the singer and the name of the song together without a space, so a space is put back
 where a lowercase letter is followed by a capital one. What Jovi heard is what is searched for.
 

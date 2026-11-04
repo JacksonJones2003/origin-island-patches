@@ -2,12 +2,16 @@ package app.originisland.extension;
 
 import android.app.Service;
 import android.content.Intent;
+import android.media.MediaMetadata;
 import android.media.session.MediaController;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.RemoteException;
+import android.os.SystemClock;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -23,6 +27,9 @@ import java.util.List;
  * what was asked for, and plays a song of the results by its id. A copy of the app installed under
  * the package of QQ Music is given the service. It answers a search with what was asked for as
  * the only song, and has the app play that from a search, as it does for a voice assistant.
+ *
+ * The music card of vivo asks QQ Music for what plays through the same interface, and not
+ * through the session, so the service answers it with what the session of the app plays.
  */
 public final class QQMusicApiService extends Service {
 
@@ -44,6 +51,13 @@ public final class QQMusicApiService extends Service {
     private static final String EVENT_PLAY_STATE_CHANGED = "API_EVENT_PLAY_STATE_CHANGED";
     private static final String EVENT_PLAY_SONG_CHANGED = "API_EVENT_PLAY_SONG_CHANGED";
     private static final int PLAY_STATE_STARTED = 4;
+    private static final int PLAY_STATE_PAUSED = 5;
+    private static final int PLAY_STATE_STOPPED = 6;
+    private static final int PLAY_STATE_BUFFERING = 10;
+    private static final int PLAY_MODE_REPEAT_LIST = 0;
+
+    private MediaController followed;
+    private String lastSongId;
 
     /**
      * How long playback is waited for after a song is asked for.
@@ -98,6 +112,7 @@ public final class QQMusicApiService extends Service {
                         if (listener != null) {
                             if (code == TRANSACTION_REGISTER_EVENT_LISTENER) {
                                 listeners.add(listener);
+                                mainHandler.post(QQMusicApiService.this::followSession);
                             } else {
                                 listeners.remove(listener);
                             }
@@ -133,7 +148,9 @@ public final class QQMusicApiService extends Service {
     }
 
     private Bundle execute(String action, Bundle params) {
-        Log.i(TAG, "Asked to " + action + " with " + describe(params));
+        if (!"getCurrTime".equals(action) && !"getPlaybackState".equals(action)) {
+            Log.i(TAG, "Asked to " + action + " with " + describe(params));
+        }
         if (action == null) {
             return result(CODE_OK);
         }
@@ -183,10 +200,37 @@ public final class QQMusicApiService extends Service {
             case "getSongList":
                 return listResult(new JSONArray());
 
-            case "getCurrTime":
-            case "getTotalTime": {
+            case "getPlaybackState": {
                 Bundle result = result(CODE_OK);
-                result.putLong(KEY_DATA, 0);
+                result.putInt(KEY_DATA, playStateOf(playbackState()));
+                return result;
+            }
+
+            case "getCurrentSong": {
+                JSONObject song = currentSong();
+                Bundle result = result(CODE_OK);
+                if (song != null) {
+                    result.putString(KEY_DATA, song.toString());
+                }
+                return result;
+            }
+
+            case "getCurrTime": {
+                Bundle result = result(CODE_OK);
+                result.putLong(KEY_DATA, positionMs());
+                return result;
+            }
+
+            case "getTotalTime": {
+                MediaMetadata metadata = metadata();
+                Bundle result = result(CODE_OK);
+                result.putLong(KEY_DATA, metadata == null ? 0 : metadata.getLong(MediaMetadata.METADATA_KEY_DURATION));
+                return result;
+            }
+
+            case "getPlayMode": {
+                Bundle result = result(CODE_OK);
+                result.putInt(KEY_DATA, PLAY_MODE_REPEAT_LIST);
                 return result;
             }
 
@@ -309,6 +353,121 @@ public final class QQMusicApiService extends Service {
                 data.recycle();
             }
         }
+    }
+
+    private static MediaController controller() {
+        MediaSession session = OriginIslandMusicCardPatch.getSession();
+        return session == null ? null : session.getController();
+    }
+
+    private static PlaybackState playbackState() {
+        MediaController controller = controller();
+        return controller == null ? null : controller.getPlaybackState();
+    }
+
+    private static MediaMetadata metadata() {
+        MediaController controller = controller();
+        return controller == null ? null : controller.getMetadata();
+    }
+
+    private static int playStateOf(PlaybackState state) {
+        if (state == null) {
+            return PLAY_STATE_STOPPED;
+        }
+        switch (state.getState()) {
+            case PlaybackState.STATE_PLAYING:
+                return PLAY_STATE_STARTED;
+            case PlaybackState.STATE_BUFFERING:
+            case PlaybackState.STATE_CONNECTING:
+                return PLAY_STATE_BUFFERING;
+            case PlaybackState.STATE_PAUSED:
+                return PLAY_STATE_PAUSED;
+            default:
+                return PLAY_STATE_STOPPED;
+        }
+    }
+
+    private static long positionMs() {
+        PlaybackState state = playbackState();
+        if (state == null) {
+            return 0;
+        }
+        long position = state.getPosition();
+        if (state.getState() == PlaybackState.STATE_PLAYING) {
+            position += (long) ((SystemClock.elapsedRealtime() - state.getLastPositionUpdateTime())
+                    * state.getPlaybackSpeed());
+        }
+        return Math.max(0, position);
+    }
+
+    /**
+     * @return What the app plays, as QQ Music tells a song.
+     */
+    private static JSONObject currentSong() {
+        MediaMetadata metadata = metadata();
+        if (metadata == null) {
+            return null;
+        }
+        try {
+            String title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
+            String artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
+            String album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM);
+            String cover = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI);
+            if (cover == null) {
+                cover = metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI);
+            }
+            if (cover == null) {
+                cover = metadata.getString(MediaMetadata.METADATA_KEY_ART_URI);
+            }
+            String id = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
+            if (id == null) {
+                id = String.valueOf(title) + "|" + artist;
+            }
+            return new JSONObject()
+                    .put("id", id)
+                    .put("mid", id)
+                    .put("title", title == null ? "" : title)
+                    .put("type", 0)
+                    .put("singer", new JSONObject().put("title", artist == null ? "" : artist).put("mid", "").put("id", 0))
+                    .put("album", new JSONObject().put("title", album == null ? "" : album)
+                            .put("coverUri", cover == null ? "" : cover).put("mid", "").put("id", 0));
+        } catch (Exception ex) {
+            Log.e(TAG, "currentSong failure", ex);
+            return null;
+        }
+    }
+
+    /**
+     * Tells the listeners, such as the music card, as the app plays, pauses or changes the song.
+     * Must be called on the main thread.
+     */
+    private void followSession() {
+        MediaController controller = controller();
+        if (controller == null || followed == controller) {
+            return;
+        }
+        followed = controller;
+        controller.registerCallback(new MediaController.Callback() {
+            @Override
+            public void onPlaybackStateChanged(PlaybackState state) {
+                Bundle extras = new Bundle();
+                extras.putInt("playState", playStateOf(state));
+                sendEvent(EVENT_PLAY_STATE_CHANGED, extras);
+            }
+
+            @Override
+            public void onMetadataChanged(MediaMetadata metadata) {
+                JSONObject song = currentSong();
+                String id = song == null ? null : song.optString("mid");
+                if (song == null || id.equals(lastSongId)) {
+                    return;
+                }
+                lastSongId = id;
+                Bundle extras = new Bundle();
+                extras.putString("playSong", song.toString());
+                sendEvent(EVENT_PLAY_SONG_CHANGED, extras);
+            }
+        }, mainHandler);
     }
 
     private static String describe(Bundle bundle) {

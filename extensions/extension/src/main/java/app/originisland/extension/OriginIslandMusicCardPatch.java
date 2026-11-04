@@ -224,6 +224,13 @@ public final class OriginIslandMusicCardPatch {
         }
     }
 
+    /**
+     * @return The session of the app, or null if it has not made one yet.
+     */
+    static MediaSession getSession() {
+        return sessionRef.get();
+    }
+
     private static boolean hasSomethingToPlay(MediaSession session) {
         return session.getController().getMetadata() != null;
     }
