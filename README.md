@@ -21,7 +21,7 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.12.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.12.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;9 patches total
+> **[v1.13.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.13.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;10 patches total
 <details open>
 <summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
@@ -40,7 +40,7 @@ risk. See the [license](LICENSE) for details.
 </details>
 
 <details open>
-<summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -50,6 +50,7 @@ risk. See the [license](LICENSE) for details.
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
+| [Jovi voice requests](#jovi-voice-requests) | Lets the Jovi voice assistant play songs asked for by voice. Only works in a second copy of YouTube Music installed next to it under the package of QQ Music with the Clone app patch. |  |
 | [Lyrics in player](#lyrics-in-player) | Shows the line of the lyrics that is sung between the cover and the title in the player. Requires the Third-party lyrics patch. |  |
 | [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island like songs, switch between repeat and shuffle, show the playlist, the playlists of the library and the downloads, and show the lyrics of the Third-party lyrics patch. | • Package name |
 | [Pause on fold](#pause-on-fold) | Pauses what plays when a foldable phone is closed. |  |

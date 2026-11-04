@@ -1,3 +1,9 @@
+## [1.13.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.12.0...v1.13.0) (2026-11-04)
+
+### ✨ New Features
+
+* **YouTube Music:** play from the card when closed, offer the card copy as YouTube Music, and take Jovi voice requests ([a1e2900](https://github.com/JacksonJones2003/origin-island-patches/commit/a1e29003080389eba2f47e20b786ba90641f608a))
+
 ## [1.12.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.11.1...v1.12.0) (2026-11-02)
 
 ### ✨ New Features
