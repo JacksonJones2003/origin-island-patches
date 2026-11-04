@@ -1,3 +1,9 @@
+## [1.13.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.13.0...v1.13.1) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **YouTube Music:** show what the Jovi copy plays on the music card and Origin Island ([a1b7865](https://github.com/JacksonJones2003/origin-island-patches/commit/a1b78650ef60c1a49ecb54bbfdb707da4a887bed))
+
 ## [1.13.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.12.0...v1.13.0) (2026-11-04)
 
 ### ✨ New Features

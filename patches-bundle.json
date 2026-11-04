@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-04T08:44:41",
-  "description": "## [1.13.0](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.12.0...v1.13.0) (2026-11-04)\n\n### ✨ New Features\n\n* **YouTube Music:** play from the card when closed, offer the card copy as YouTube Music, and take Jovi voice requests ([a1e2900](https://github.com/JacksonJones2003/origin-island-patches/commit/a1e29003080389eba2f47e20b786ba90641f608a))",
-  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.13.0/patches-1.13.0.mpp",
+  "created_at": "2026-11-04T08:48:42",
+  "description": "## [1.13.1](https://github.com/JacksonJones2003/origin-island-patches/compare/v1.13.0...v1.13.1) (2026-11-04)\n\n### 🐛 Bug Fixes\n\n* **YouTube Music:** show what the Jovi copy plays on the music card and Origin Island ([a1b7865](https://github.com/JacksonJones2003/origin-island-patches/commit/a1b78650ef60c1a49ecb54bbfdb707da4a887bed))",
+  "download_url": "https://github.com/JacksonJones2003/origin-island-patches/releases/download/v1.13.1/patches-1.13.1.mpp",
   "signature_download_url": "",
-  "version": "1.13.0"
+  "version": "1.13.1"
 }
