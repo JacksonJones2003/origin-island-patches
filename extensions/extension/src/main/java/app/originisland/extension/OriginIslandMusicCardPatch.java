@@ -231,6 +231,26 @@ public final class OriginIslandMusicCardPatch {
         return sessionRef.get();
     }
 
+    /**
+     * @return The lyrics of what plays in the LRC format, or an empty string if it has none.
+     */
+    static synchronized String getLyrics() {
+        return lyrics;
+    }
+
+    /**
+     * @return The loop mode of the card for the play modes of the app, or 0 if they are not known yet.
+     */
+    static int getLoopMode() {
+        if (playModes == null || !playModes.isKnown()) {
+            return 0;
+        }
+        if (playModes.getShuffleMode() >= PlayModes.SHUFFLE_MODE_ALL) {
+            return LOOP_MODE_RANDOM;
+        }
+        return playModes.getRepeatMode() == PlayModes.REPEAT_MODE_ONE ? LOOP_MODE_SINGLE : LOOP_MODE_LIST;
+    }
+
     private static boolean hasSomethingToPlay(MediaSession session) {
         return session.getController().getMetadata() != null;
     }
@@ -756,6 +776,7 @@ public final class OriginIslandMusicCardPatch {
             lyrics = lrc;
             // The app may still be about to publish the track these lyrics are for.
             mainHandler.post(OriginIslandMusicCardPatch::sendLyrics);
+            mainHandler.post(QQMusicApiService::onLyricsChanged);
         }
     }
 

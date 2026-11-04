@@ -148,12 +148,26 @@ public final class LibraryBrowser {
             CLIENT_ANDROID_AUTO, CLIENT_MEDIA_CONTROLLER_TEST) {
         @Override
         boolean isOnPath(int depth, MediaBrowser.MediaItem node) {
-            return (depth == 1 ? OFFLINE_NODE_ID : DOWNLOADS_NODE_ID).equals(node.getMediaId());
+            // The downloads are below what is on the device, or right below the root in newer versions.
+            return (depth == 1 && OFFLINE_NODE_ID.equals(node.getMediaId()))
+                    || DOWNLOADS_NODE_ID.equals(node.getMediaId());
         }
 
         @Override
         boolean isList(int depth, List<MediaBrowser.MediaItem> children) {
-            return depth == 2;
+            if (depth == 2) {
+                return true;
+            }
+            if (depth != 1) {
+                return false;
+            }
+            // What is on the device has the downloads below it, and the downloads have their items.
+            for (MediaBrowser.MediaItem child : children) {
+                if (DOWNLOADS_NODE_ID.equals(child.getMediaId())) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override

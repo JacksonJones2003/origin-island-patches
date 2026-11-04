@@ -389,8 +389,11 @@ vivo can warn about the copy as it is installed, since it has the package of QQ 
 signature; keep the app to use it. The real QQ Music cannot be installed next to the copy.
 
 While the copy plays, the music card and Origin Island show it as they show QQ Music: the card asks
-the copy for the song, its cover, whether it plays and how far, which the copy answers with what
-YouTube Music plays.
+the copy for the song, its cover, whether it plays and how far, its lyrics, the playlist, the
+favorites and downloads lists, the heart and the play mode, which the copy answers from YouTube
+Music. The playlist is the queue, the favorites list has the playlists of the library, and the
+download list has the downloads of YouTube Music under its own package if it is patched as well,
+which then plays them, or otherwise the downloads of the copy.
 
 Jovi puts the singer and the name of the song together without a space, so a space is put back
 where a lowercase letter is followed by a capital one. What Jovi heard is what is searched for.

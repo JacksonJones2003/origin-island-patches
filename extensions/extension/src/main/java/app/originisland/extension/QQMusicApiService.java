@@ -28,8 +28,9 @@ import java.util.List;
  * the package of QQ Music is given the service. It answers a search with what was asked for as
  * the only song, and has the app play that from a search, as it does for a voice assistant.
  *
- * The music card of vivo asks QQ Music for what plays through the same interface, and not
- * through the session, so the service answers it with what the session of the app plays.
+ * The music card of vivo asks QQ Music for what plays, its lyrics and its lists through the same
+ * interface, and not through the session, so the service answers it with what the session of the
+ * app plays, the lyrics the patch loads, the queue, and the playlists and downloads of the library.
  */
 public final class QQMusicApiService extends Service {
 
@@ -101,7 +102,9 @@ public final class QQMusicApiService extends Service {
                         String action = data.readString();
                         Bundle params = readBundle(data);
                         IBinder callback = data.readStrongBinder();
-                        returnTo(callback, execute(action, params));
+                        if (!executeAsync(action, params, result -> returnTo(callback, result))) {
+                            returnTo(callback, execute(action, params));
+                        }
                         return true;
                     }
                     case TRANSACTION_REGISTER_EVENT_LISTENER:
@@ -136,6 +139,94 @@ public final class QQMusicApiService extends Service {
             return super.onTransact(code, data, reply, flags);
         }
     };
+
+    private interface Result {
+        void send(Bundle result);
+    }
+
+    private static final String ID_QUEUE = "ytm_queue:";
+    private static final String ID_PLAYLIST = "ytm_playlist:";
+    private static final String ID_DOWNLOAD = "ytm_download:";
+    private static final String FAVORITES_FOLDER_ID = "ytm_library_playlists";
+    private static final int FOLDER_TYPE_FAVORITES = 101;
+
+    private static java.lang.ref.WeakReference<QQMusicApiService> instanceRef = new java.lang.ref.WeakReference<>(null);
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        instanceRef = new java.lang.ref.WeakReference<>(this);
+    }
+
+    /**
+     * Called on the main thread as the lyrics of what plays load, which the card asks for
+     * as it is told the song changed.
+     */
+    static void onLyricsChanged() {
+        QQMusicApiService service = instanceRef.get();
+        if (service != null && !service.listeners.isEmpty()) {
+            service.sendSongChanged();
+        }
+    }
+
+    /**
+     * Answers the requests that take a while, such as for the lists of the library.
+     *
+     * @return If the request is answered here.
+     */
+    private boolean executeAsync(String action, Bundle params, Result result) {
+        if (!"getSongList".equals(action) && !"getUserSongList".equals(action)) {
+            return false;
+        }
+        Log.i(TAG, "Asked to " + action + " with " + describe(params));
+        if (params != null && params.getInt("page", 0) > 0) {
+            result.send(listResult(new JSONArray()));
+            return true;
+        }
+
+        boolean favorites = "getUserSongList".equals(action)
+                || (params != null && params.getInt("folderType") == FOLDER_TYPE_FAVORITES);
+        LibraryBrowser.LibraryList list = favorites ? LibraryBrowser.PLAYLISTS : LibraryBrowser.DOWNLOADS;
+        String prefix = favorites ? ID_PLAYLIST : ID_DOWNLOAD;
+        Runnable loadOwn = () -> LibraryBrowser.load(getApplicationContext(), list, children -> {
+            JSONArray songs = new JSONArray();
+            if (children != null) {
+                for (android.media.browse.MediaBrowser.MediaItem child : children) {
+                    if (!child.isPlayable()) {
+                        continue;
+                    }
+                    android.media.MediaDescription description = child.getDescription();
+                    songs.put(song(prefix + child.getMediaId(), text(description.getTitle()),
+                            text(description.getSubtitle()), "", ""));
+                }
+            }
+            Log.i(TAG, "Answered " + action + " with " + songs.length() + " items");
+            result.send(listResult(songs));
+        });
+
+        // The downloads are the ones of YouTube Music under its own package, if it is patched as well,
+        // which also plays them.
+        // The context of the service, as the one of the app may be made to tell the package of
+        // YouTube Music for its sign-in.
+        if (!favorites && RegularApp.isAvailable(this)) {
+            mainHandler.post(() -> RegularApp.loadDownloads(this, downloads -> {
+                if (downloads == null || downloads.isEmpty()) {
+                    loadOwn.run();
+                    return;
+                }
+                JSONArray songs = new JSONArray();
+                for (android.media.MediaDescription description : downloads) {
+                    songs.put(song(description.getMediaId(), text(description.getTitle()),
+                            text(description.getSubtitle()), "", ""));
+                }
+                Log.i(TAG, "Answered " + action + " with " + songs.length() + " downloads of YouTube Music");
+                result.send(listResult(songs));
+            }));
+        } else {
+            mainHandler.post(loadOwn);
+        }
+        return true;
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -173,6 +264,8 @@ public final class QQMusicApiService extends Service {
                 if (query != null) {
                     Log.i(TAG, "Playing what was asked for: " + query);
                     playFromSearch(query, id);
+                } else {
+                    playFromList(id);
                 }
                 return result(CODE_OK);
             }
@@ -196,9 +289,40 @@ public final class QQMusicApiService extends Service {
                 return result(CODE_OK);
 
             case "getPlayList":
+                return params != null && params.getInt("page", 0) > 0 ? listResult(new JSONArray()) : queueResult();
+
             case "getFolderList":
             case "getSongList":
+            case "getUserSongList":
                 return listResult(new JSONArray());
+
+            case "getFavouriteFolderId": {
+                Bundle result = result(CODE_OK);
+                result.putString(KEY_DATA, FAVORITES_FOLDER_ID);
+                return result;
+            }
+
+            case "getLyricWithId": {
+                Bundle result = result(CODE_OK);
+                result.putString(KEY_DATA, OriginIslandMusicCardPatch.getLyrics());
+                return result;
+            }
+
+            case "addToFavourite":
+            case "removeFromFavourite": {
+                boolean like = "addToFavourite".equals(action);
+                control(controls -> controls.setRating(android.media.Rating.newHeartRating(like)));
+                return result(CODE_OK);
+            }
+
+            case "setPlayMode": {
+                int playMode = params == null ? 0 : params.getInt("playMode", params.getInt("mode", 0));
+                Bundle extras = new Bundle();
+                extras.putInt(MusicCardProtocol.KEY_LOOP_MODE, playMode == 1 ? MusicCardProtocol.LOOP_MODE_SINGLE
+                        : playMode == 2 ? MusicCardProtocol.LOOP_MODE_RANDOM : MusicCardProtocol.LOOP_MODE_LIST);
+                control(controls -> controls.sendCustomAction(MusicCardProtocol.ACTION_PLAY_MODE, extras));
+                return result(CODE_OK);
+            }
 
             case "getPlaybackState": {
                 Bundle result = result(CODE_OK);
@@ -229,12 +353,19 @@ public final class QQMusicApiService extends Service {
             }
 
             case "getPlayMode": {
+                int loopMode = OriginIslandMusicCardPatch.getLoopMode();
                 Bundle result = result(CODE_OK);
-                result.putInt(KEY_DATA, PLAY_MODE_REPEAT_LIST);
+                result.putInt(KEY_DATA, loopMode == MusicCardProtocol.LOOP_MODE_SINGLE ? 1
+                        : loopMode == MusicCardProtocol.LOOP_MODE_RANDOM ? 2 : PLAY_MODE_REPEAT_LIST);
                 return result;
             }
 
-            case "isFavouriteMid":
+            case "isFavouriteMid": {
+                Bundle result = result(CODE_OK);
+                result.putBooleanArray(KEY_DATA, new boolean[]{isLiked()});
+                return result;
+            }
+
             case "isQQMusicForeground": {
                 Bundle result = result(CODE_OK);
                 result.putBoolean(KEY_DATA, false);
@@ -463,11 +594,19 @@ public final class QQMusicApiService extends Service {
                     return;
                 }
                 lastSongId = id;
-                Bundle extras = new Bundle();
-                extras.putString("playSong", song.toString());
-                sendEvent(EVENT_PLAY_SONG_CHANGED, extras);
+                sendSongChanged();
             }
         }, mainHandler);
+    }
+
+    private void sendSongChanged() {
+        JSONObject song = currentSong();
+        if (song == null) {
+            return;
+        }
+        Bundle extras = new Bundle();
+        extras.putString("playSong", song.toString());
+        sendEvent(EVENT_PLAY_SONG_CHANGED, extras);
     }
 
     private static String describe(Bundle bundle) {
@@ -483,6 +622,74 @@ public final class QQMusicApiService extends Service {
 
     private void control(LibraryBrowser.Control control) {
         LibraryBrowser.control(getApplicationContext(), control);
+    }
+
+    /**
+     * Plays a song of the queue, or a playlist or download of the library, the card lists.
+     */
+    private void playFromList(String id) {
+        if (id == null) {
+            return;
+        }
+        Log.i(TAG, "Playing from a list: " + id);
+        if (RegularApp.isMediaIdOfApp(id)) {
+            mainHandler.post(() -> RegularApp.play(this, id));
+        } else if (id.startsWith(ID_QUEUE)) {
+            try {
+                long queueId = Long.parseLong(id.substring(ID_QUEUE.length()));
+                control(controls -> controls.skipToQueueItem(queueId));
+            } catch (NumberFormatException ex) {
+                Log.e(TAG, "playFromList failure", ex);
+            }
+        } else if (id.startsWith(ID_PLAYLIST) || id.startsWith(ID_DOWNLOAD)) {
+            boolean playlist = id.startsWith(ID_PLAYLIST);
+            String mediaId = id.substring((playlist ? ID_PLAYLIST : ID_DOWNLOAD).length());
+            Bundle extras = new Bundle();
+            extras.putString(MusicCardProtocol.KEY_LIST, playlist ? MusicCardProtocol.LIST_FAVORITE : MusicCardProtocol.LIST_LOCAL);
+            control(controls -> controls.playFromMediaId(mediaId, extras));
+        }
+    }
+
+    /**
+     * @return The queue of the app, as QQ Music lists its playlist.
+     */
+    private static Bundle queueResult() {
+        JSONArray songs = new JSONArray();
+        MediaController controller = controller();
+        List<MediaSession.QueueItem> queue = controller == null ? null : controller.getQueue();
+        if (queue != null) {
+            for (MediaSession.QueueItem item : queue) {
+                android.media.MediaDescription description = item.getDescription();
+                songs.put(song(ID_QUEUE + item.getQueueId(), text(description.getTitle()),
+                        text(description.getSubtitle()), "", ""));
+            }
+        }
+        return listResult(songs);
+    }
+
+    private static JSONObject song(String id, String title, String artist, String album, String cover) {
+        try {
+            return new JSONObject()
+                    .put("id", id)
+                    .put("mid", id)
+                    .put("title", title)
+                    .put("type", 0)
+                    .put("singer", new JSONObject().put("title", artist).put("mid", "").put("id", 0))
+                    .put("album", new JSONObject().put("title", album).put("coverUri", cover).put("mid", "").put("id", 0));
+        } catch (Exception ex) {
+            Log.e(TAG, "song failure", ex);
+            return new JSONObject();
+        }
+    }
+
+    private static String text(CharSequence text) {
+        return text == null ? "" : text.toString();
+    }
+
+    private static boolean isLiked() {
+        MediaMetadata metadata = metadata();
+        android.media.Rating rating = metadata == null ? null : metadata.getRating(MediaMetadata.METADATA_KEY_RATING);
+        return rating != null && rating.getRatingStyle() == android.media.Rating.RATING_HEART && rating.hasHeart();
     }
 
     private static Bundle result(int code) {
