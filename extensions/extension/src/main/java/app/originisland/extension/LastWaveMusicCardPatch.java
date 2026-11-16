@@ -382,6 +382,44 @@ public final class LastWaveMusicCardPatch {
     }
 
     /**
+     * Injection point. Called with the extras of the session.
+     *
+     * Since version 5.2, LastWave sends the card the lyrics of the song that plays from its
+     * playback service, also when none of its screens are open, under a media id of its own.
+     * The card only takes lyrics for the media id of the metadata, which this patch sets, so
+     * they are kept as the lyrics of the song and sent under that media id. Lyrics the player
+     * of the app loaded for the song are kept over them.
+     *
+     * @return The extras to set.
+     */
+    public static synchronized Bundle onSetExtras(MediaSession session, Bundle extras) {
+        try {
+            if (extras == null || !EXTRA_ACTION_LYRICS_CHANGED.equals(extras.getString(EXTRA_ACTION))) {
+                return extras;
+            }
+
+            String lrc = extras.getString(EXTRA_LYRICS);
+            if (lrc != null && !lrc.isEmpty() && !trackId.isEmpty()
+                    && (!trackId.equals(lyricsFor) || lyrics.isEmpty())) {
+                lyrics = lrc;
+                lyricsFor = trackId;
+                Log.i(TAG, "Lyrics of the app: " + lrc.length() + " characters");
+            }
+
+            Bundle withMediaId = new Bundle(extras);
+            withMediaId.putString(EXTRA_MEDIA_ID, trackId);
+            if (trackId.equals(lyricsFor) && !lyrics.isEmpty()) {
+                withMediaId.putString(EXTRA_LYRICS, lyrics);
+            }
+            return withMediaId;
+        } catch (Exception ex) {
+            Log.e(TAG, "onSetExtras failure", ex);
+        }
+
+        return extras;
+    }
+
+    /**
      * Sends the lyrics of the song that plays, or none if LastWave has not loaded them yet.
      */
     private static void sendLyrics() {
