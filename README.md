@@ -21,7 +21,7 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.14.2](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.14.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;10 patches total
+> **[v1.15.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.15.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;11 patches total
 <details open>
 <summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
@@ -58,7 +58,7 @@ risk. See the [license](LICENSE) for details.
 </details>
 
 <details open>
-<summary>📦 Apple Music&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary>📦 Apple Music&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -69,6 +69,7 @@ risk. See the [license](LICENSE) for details.
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island show lyrics, like songs, switch between repeat and shuffle, and show the playlist and play from it. This does not get past any checks of the app, so the app may refuse to work once it is patched. |  |
+| [Queue beside the player](#queue-beside-the-player) | On an unfolded foldable phone or a tablet, shows the queue beside the player, or the lyrics with the lyrics button, with the cover and controls on the other half. |  |
 
 </details>
 
